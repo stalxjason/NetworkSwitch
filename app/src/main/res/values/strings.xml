@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">网络切换</string>
+    <string name="widget_name">网络切换开关</string>
+    <string name="widget_description">一键切换 4G/5G 网络模式</string>
+</resources>
