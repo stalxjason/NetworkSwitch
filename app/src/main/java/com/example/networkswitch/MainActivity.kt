@@ -37,11 +37,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 状态栏：白色图标（适配澎湃OS / MIUI / 原生 Android）
-        setupStatusBar()
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // 边到边显示
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // 状态栏：蓝色背景 + 白色图标
+        setupStatusBar()
 
         // 注册 Shizuku 权限监听
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
@@ -115,19 +117,16 @@ class MainActivity : AppCompatActivity() {
      * 蓝色背景 + 白色图标
      */
     private fun setupStatusBar() {
-        // 边到边显示
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
         // 设置状态栏背景色
         window.statusBarColor = getColor(R.color.primary)
 
-        // 设置状态栏图标为白色（不清除任何 flag）
+        // 设置状态栏图标为白色
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val controller = window.insetsController
-            controller?.setSystemBarsAppearance(0, 0x8) // 0x8 = APPEARANCE_LIGHT_STATUS_BARS
+            controller?.setSystemBarsAppearance(0, 0x8)
         }
 
-        // 处理系统栏内边距，防止内容被遮挡
+        // 处理系统栏内边距
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, windowInsets ->
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updatePadding(top = insets.top)
