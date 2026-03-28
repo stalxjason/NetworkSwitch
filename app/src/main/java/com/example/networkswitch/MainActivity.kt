@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.networkswitch.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
@@ -33,10 +32,6 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        // 纯黑状态栏，让系统自动判断白色图标
-        window.statusBarColor = 0xFF000000.toInt()
-        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         setupUI()
