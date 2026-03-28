@@ -34,9 +34,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 状态栏：蓝色背景 + 白色图标
-        window.statusBarColor = getColor(R.color.primary)
-        window.insetsController?.setSystemBarsAppearance(0, 0x8)
+        // 透明状态栏，系统自动判断图标颜色
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
