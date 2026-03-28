@@ -1,16 +1,10 @@
 package com.example.networkswitch
 
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.WindowInsetsController
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import com.example.networkswitch.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
@@ -40,10 +34,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 边到边显示
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        // 状态栏：蓝色背景 + 白色图标
-        setupStatusBar()
+        // 状态栏蓝色背景 + 白色图标
+        window.statusBarColor = getColor(R.color.primary)
 
         // 注册 Shizuku 权限监听
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
