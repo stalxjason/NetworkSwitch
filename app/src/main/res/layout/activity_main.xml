@@ -12,12 +12,12 @@
         android:orientation="vertical"
         android:padding="24dp">
 
-        <!-- 顶部标题区 -->
+        <!-- 顶部标题 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="32dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -41,17 +41,17 @@
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="4dp">
+            android:layout_marginBottom="24dp"
+            app:cardBackgroundColor="@color/primary"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@color/primary"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:padding="24dp">
+                android:paddingVertical="32dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -85,25 +85,27 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_toggle"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:layout_marginBottom="24dp"
+            android:layout_height="60dp"
+            android:layout_marginBottom="28dp"
             android:text="切换 4G/5G"
             android:textSize="18sp"
+            app:backgroundTint="@color/primary"
             app:cornerRadius="16dp" />
 
-        <!-- 状态信息卡片 -->
+        <!-- 状态信息 -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            app:cardBackgroundColor="@color/card_bg"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="20dp">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -140,7 +142,9 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:text="授权 Shizuku"
-            app:cornerRadius="12dp" />
+            android:textColor="@color/text_primary"
+            app:cornerRadius="12dp"
+            app:strokeColor="@color/text_hint" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_open_settings"
@@ -149,7 +153,9 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:text="打开系统网络设置"
-            app:cornerRadius="12dp" />
+            android:textColor="@color/text_primary"
+            app:cornerRadius="12dp"
+            app:strokeColor="@color/text_hint" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_refresh"
@@ -157,6 +163,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="刷新状态"
+            android:textColor="@color/text_secondary"
             app:cornerRadius="12dp" />
 
     </LinearLayout>
