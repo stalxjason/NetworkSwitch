@@ -3,49 +3,53 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- 圆形背景 -->
+    <!-- 蓝色圆形背景（满铺） -->
     <path
         android:fillColor="#1976D2"
-        android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0" />
+        android:pathData="M0,0h108v108H0z" />
+    <!-- 圆角方形底 -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M0,0h108v108H0z" />
     <!-- 信号塔底座 -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M50,78 L58,78 L58,58 L50,58 Z" />
+        android:pathData="M47,78h14v-20h-14z" />
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M46,78 L62,78 L62,82 L46,82 Z" />
-    <!-- 信号塔主体 -->
+        android:pathData="M43,78h22v4h-22z" />
+    <!-- 信号塔杆 -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M52,42 L56,42 L56,58 L52,58 Z" />
-    <!-- 顶部三角 -->
+        android:pathData="M52,42h4v36h-4z" />
+    <!-- 信号塔顶部 -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,30 L59,42 L49,42 Z" />
-    <!-- 信号波纹 左 -->
+        android:pathData="M54,28 L60,42 L48,42 Z" />
+    <!-- 左侧信号 -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
+        android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M38,44 Q42,38 42,32" />
+        android:pathData="M40,46 Q43,38 43,30" />
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
+        android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M34,46 Q40,36 40,28" />
-    <!-- 信号波纹 右 -->
+        android:pathData="M35,48 Q40,36 40,26" />
+    <!-- 右侧信号 -->
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
+        android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M70,44 Q66,38 66,32" />
+        android:pathData="M68,46 Q65,38 65,30" />
     <path
         android:fillColor="#00000000"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="2.5"
+        android:strokeWidth="3"
         android:strokeLineCap="round"
-        android:pathData="M74,46 Q68,36 68,28" />
+        android:pathData="M73,48 Q68,36 68,26" />
 </vector>
