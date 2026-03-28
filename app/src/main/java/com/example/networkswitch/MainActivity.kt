@@ -3,6 +3,7 @@ package com.example.networkswitch
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -34,8 +35,12 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 状态栏蓝色背景 + 白色图标
+        // 状态栏蓝色背景
         window.statusBarColor = getColor(R.color.primary)
+        // 强制白色图标（清除 LIGHT_STATUS_BAR 标志）
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility =
+            window.decorView.systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
 
         // 注册 Shizuku 权限监听
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
