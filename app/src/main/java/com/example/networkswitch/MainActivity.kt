@@ -124,30 +124,37 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 小米澎湃OS / MIUI 专用：设置状态栏暗色模式
-     * @param darkMode true=深色图标, false=浅色（白色）图标
+     * 小米澎湃OS / MIUI 专用：设置状态栏图标为白色
      */
     private fun setMiuiStatusBarDarkMode(window: Window, darkMode: Boolean): Boolean {
-        return try {
+        // 尝试新版澎湃OS / HyperOS 的 API
+        try {
             val clazz = window.javaClass
-            val layoutParams = Class.forName("android.view.MiuiWindowManager\$LayoutParams")
-            val darkModeFlag = layoutParams.getField("EXTRA_FLAG_STATUS_BAR_DARK_MODE").getInt(null)
             val method = clazz.getMethod(
                 "setExtraFlags",
                 Int::class.javaPrimitiveType,
                 Int::class.javaPrimitiveType
             )
-            method.invoke(window, if (darkMode) darkModeFlag else 0, darkModeFlag)
-            true
-        } catch (_: Exception) {
-            // 非 MIUI/澎湃OS 设备，fallback
-            try {
-                window.addFlags(0x00000000) // FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
-                false
-            } catch (_: Exception) {
-                false
-            }
-        }
+            // darkMode=false → 0x00000010 (浅色/白色图标)
+            // darkMode=true  → 0x00000000 (深色图标，即默认)
+            method.invoke(window, if (darkMode) 0 else 0x10, 0x10)
+            return true
+        } catch (_: Exception) {}
+
+        // 尝试旧版 MIUI 的类名
+        try {
+            val layoutParams = Class.forName("android.view.MiuiWindowManager\$LayoutParams")
+            val darkModeFlag = layoutParams.getField("EXTRA_FLAG_STATUS_BAR_DARK_MODE").getInt(null)
+            val method = window.javaClass.getMethod(
+                "setExtraFlags",
+                Int::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType
+            )
+            method.invoke(window, if (darkMode) 0 else darkModeFlag, darkModeFlag)
+            return true
+        } catch (_: Exception) {}
+
+        return false
     }
 
     private fun refreshStatus() {
