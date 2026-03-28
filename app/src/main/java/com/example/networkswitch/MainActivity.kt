@@ -34,9 +34,15 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // 透明状态栏，系统自动判断图标颜色
+        // 透明状态栏，蓝色背景透过去
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // 强制清除深色图标标志
+        @Suppress("DEPRECATION")
+        val flags = window.decorView.systemUiVisibility
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility = flags and (1 shl 8).inv() // SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
 
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         setupUI()
@@ -51,6 +57,8 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         refreshStatus()
+        // 在 resume 时重新设置状态栏（适配澎湃OS）
+        window.insetsController?.setSystemBarsAppearance(0, 0x8)
     }
 
     private fun setupUI() {
