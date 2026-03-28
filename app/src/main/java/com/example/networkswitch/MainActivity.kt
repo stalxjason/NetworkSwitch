@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
@@ -32,15 +31,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Edge-to-edge: 让 app 内容延伸到系统栏后面
-        enableEdgeToEdge()
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        // 蓝色背景 + 白色图标
-        window.statusBarColor = getColor(R.color.primary)
-        window.insetsController?.setSystemBarsAppearance(0, 0x8) // 清除 LIGHT_STATUS_BARS
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // 状态栏：蓝色背景 + 白色图标
+        window.statusBarColor = getColor(R.color.primary)
+        window.insetsController?.setSystemBarsAppearance(0, 0x8)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         setupUI()
