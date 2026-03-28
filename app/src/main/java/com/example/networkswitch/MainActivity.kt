@@ -1,10 +1,13 @@
 package com.example.networkswitch
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.networkswitch.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
@@ -30,6 +33,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 强制设置状态栏为白色图标（适配澎湃OS等定制系统）
+        val window = window
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.isAppearanceLightStatusBars = false
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
