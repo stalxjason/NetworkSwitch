@@ -5,7 +5,6 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
-import rikka.shizuku.ShizukuRemoteProcess
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -101,7 +100,7 @@ object ShizukuHelper {
                 return@withContext ShellResult(false, "", "Shizuku 未运行或未授权")
             }
 
-            val process = newProcess(command)
+            val process = Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
             val stdout = BufferedReader(InputStreamReader(process.inputStream)).readText()
             val stderr = BufferedReader(InputStreamReader(process.errorStream)).readText()
             process.waitFor()
@@ -111,11 +110,6 @@ object ShizukuHelper {
             Log.e(TAG, "Failed to exec via Shizuku: $command", e)
             ShellResult(false, "", e.message ?: "Unknown error")
         }
-    }
-
-    private fun newProcess(command: String): ShizukuRemoteProcess {
-        val token = Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
-        return ShizukuRemoteProcess(token)
     }
 
     data class ShellResult(

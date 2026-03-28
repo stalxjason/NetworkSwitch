@@ -1,7 +1,6 @@
 package com.example.networkswitch
 
 import android.content.Context
-import android.os.Build
 import android.telephony.TelephonyManager
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
@@ -26,18 +25,7 @@ object NetworkModeHelper {
      * 获取当前网络模式
      */
     fun getCurrentMode(context: Context): NetworkMode {
-        return try {
-            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val mode = tm.preferredNetworkMode
-                NetworkMode.fromTelephonyType(mode) ?: fallbackFromSettings(context)
-            } else {
-                fallbackFromSettings(context)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to get current mode via TelephonyManager", e)
-            fallbackFromSettings(context)
-        }
+        return fallbackFromSettings(context)
     }
 
     private fun fallbackFromSettings(context: Context): NetworkMode {
