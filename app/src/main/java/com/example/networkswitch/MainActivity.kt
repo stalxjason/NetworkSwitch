@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.Window
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
@@ -34,10 +35,8 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 强制设置状态栏为白色图标（适配澎湃OS等定制系统）
-        val window = window
-        val controller = WindowInsetsControllerCompat(window, window.decorView)
-        controller.isAppearanceLightStatusBars = false
+        // 状态栏：白色图标（适配澎湃OS / MIUI / 原生 Android）
+        setupStatusBar()
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -106,6 +105,48 @@ class MainActivity : AppCompatActivity() {
             }
         } catch (_: Exception) {
             // 未安装
+        }
+    }
+
+    /**
+     * 设置状态栏白色图标
+     * 优先使用澎湃OS/MIUI 专有 API，fallback 到标准 Android API
+     */
+    private fun setupStatusBar() {
+        val window = window
+
+        // 方案1: 澎湃OS / MIUI 反射设置
+        if (setMiuiStatusBarDarkMode(window, false)) return
+
+        // 方案2: 原生 Android (API 23+)
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.isAppearanceLightStatusBars = false
+    }
+
+    /**
+     * 小米澎湃OS / MIUI 专用：设置状态栏暗色模式
+     * @param darkMode true=深色图标, false=浅色（白色）图标
+     */
+    private fun setMiuiStatusBarDarkMode(window: Window, darkMode: Boolean): Boolean {
+        return try {
+            val clazz = window.javaClass
+            val layoutParams = Class.forName("android.view.MiuiWindowManager\$LayoutParams")
+            val darkModeFlag = layoutParams.getField("EXTRA_FLAG_STATUS_BAR_DARK_MODE").getInt(null)
+            val method = clazz.getMethod(
+                "setExtraFlags",
+                Int::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType
+            )
+            method.invoke(window, if (darkMode) darkModeFlag else 0, darkModeFlag)
+            true
+        } catch (_: Exception) {
+            // 非 MIUI/澎湃OS 设备，fallback
+            try {
+                window.addFlags(0x00000000) // FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
+                false
+            } catch (_: Exception) {
+                false
+            }
         }
     }
 
