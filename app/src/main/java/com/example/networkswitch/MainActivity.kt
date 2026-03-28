@@ -4,11 +4,13 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.Window
+import android.view.WindowInsetsController
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import com.example.networkswitch.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
@@ -109,52 +111,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 设置状态栏白色图标
-     * 优先使用澎湃OS/MIUI 专有 API，fallback 到标准 Android API
+     * 适配 Android 14+ 状态栏规范
+     * 蓝色背景 + 白色图标
      */
     private fun setupStatusBar() {
-        val window = window
+        // 边到边显示
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // 方案1: 澎湃OS / MIUI 反射设置
-        if (setMiuiStatusBarDarkMode(window, false)) return
+        // 设置状态栏背景色
+        window.statusBarColor = getColor(R.color.primary)
 
-        // 方案2: 原生 Android (API 23+)
-        val controller = WindowInsetsControllerCompat(window, window.decorView)
-        controller.isAppearanceLightStatusBars = false
-    }
+        // 设置状态栏图标为白色（不清除任何 flag）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val controller = window.insetsController
+            controller?.setSystemBarsAppearance(0, 0x8) // 0x8 = APPEARANCE_LIGHT_STATUS_BARS
+        }
 
-    /**
-     * 小米澎湃OS / MIUI 专用：设置状态栏图标为白色
-     */
-    private fun setMiuiStatusBarDarkMode(window: Window, darkMode: Boolean): Boolean {
-        // 尝试新版澎湃OS / HyperOS 的 API
-        try {
-            val clazz = window.javaClass
-            val method = clazz.getMethod(
-                "setExtraFlags",
-                Int::class.javaPrimitiveType,
-                Int::class.javaPrimitiveType
-            )
-            // darkMode=false → 0x00000010 (浅色/白色图标)
-            // darkMode=true  → 0x00000000 (深色图标，即默认)
-            method.invoke(window, if (darkMode) 0 else 0x10, 0x10)
-            return true
-        } catch (_: Exception) {}
-
-        // 尝试旧版 MIUI 的类名
-        try {
-            val layoutParams = Class.forName("android.view.MiuiWindowManager\$LayoutParams")
-            val darkModeFlag = layoutParams.getField("EXTRA_FLAG_STATUS_BAR_DARK_MODE").getInt(null)
-            val method = window.javaClass.getMethod(
-                "setExtraFlags",
-                Int::class.javaPrimitiveType,
-                Int::class.javaPrimitiveType
-            )
-            method.invoke(window, if (darkMode) 0 else darkModeFlag, darkModeFlag)
-            return true
-        } catch (_: Exception) {}
-
-        return false
+        // 处理系统栏内边距，防止内容被遮挡
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.updatePadding(top = insets.top)
+            windowInsets
+        }
     }
 
     private fun refreshStatus() {
