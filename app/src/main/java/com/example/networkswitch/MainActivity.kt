@@ -104,28 +104,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 适配 Android 14+ 状态栏规范
-     * 蓝色背景 + 白色图标
-     */
-    private fun setupStatusBar() {
-        // 设置状态栏背景色
-        window.statusBarColor = getColor(R.color.primary)
-
-        // 设置状态栏图标为白色
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val controller = window.insetsController
-            controller?.setSystemBarsAppearance(0, 0x8)
-        }
-
-        // 处理系统栏内边距
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, windowInsets ->
-            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.updatePadding(top = insets.top)
-            windowInsets
-        }
-    }
-
     private fun refreshStatus() {
         // 当前网络模式
         val currentMode = NetworkModeHelper.getCurrentMode(this)
