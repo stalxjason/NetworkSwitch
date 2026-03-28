@@ -11,22 +11,14 @@ import java.io.InputStreamReader
 /**
  * Shizuku 授权管理
  *
- * Shizuku 通过 ADB shell 权限运行，允许普通应用执行需要特权的 shell 命令。
- * 无需 Root，但需要用户安装 Shizuku 并保持运行。
- *
- * 使用方式：
- * 1. 安装 Shizuku (https://shizuku.rikka.app)
- * 2. 通过 ADB 或无线调试启动 Shizuku
- * 3. 在本应用中授权 Shizuku 权限
+ * 通过反射调用 Shizuku.newProcess 执行 shell 命令
+ * （newProcess 在 Shizuku v13+ 被 @hide，需要反射访问）
  */
 object ShizukuHelper {
 
     private const val TAG = "ShizukuHelper"
     private const val SHIZUKU_PERMISSION_REQUEST_CODE = 1001
 
-    /**
-     * Shizuku 运行状态
-     */
     sealed class Status {
         data object NotInstalled : Status()
         data object NotRunning : Status()
@@ -34,13 +26,10 @@ object ShizukuHelper {
         data object Authorized : Status()
     }
 
-    /**
-     * 获取 Shizuku 当前状态
-     */
     fun getStatus(): Status {
         return try {
             if (!pingBinder()) {
-                Status.NotRunning // Binder 不通 → 未运行（或未安装）
+                Status.NotRunning
             } else {
                 if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                     Status.Authorized
@@ -54,14 +43,8 @@ object ShizukuHelper {
         }
     }
 
-    /**
-     * Shizuku 是否可用（运行 + 已授权）
-     */
     fun isAvailable(): Boolean = getStatus() is Status.Authorized
 
-    /**
-     * 尝试 ping Shizuku binder
-     */
     private fun pingBinder(): Boolean {
         return try {
             Shizuku.pingBinder()
@@ -70,10 +53,6 @@ object ShizukuHelper {
         }
     }
 
-    /**
-     * 请求 Shizuku 权限
-     * 调用方需注册 OnRequestPermissionResultListener
-     */
     fun requestPermission() {
         try {
             if (Shizuku.shouldShowRequestPermissionRationale()) {
@@ -85,14 +64,11 @@ object ShizukuHelper {
         }
     }
 
-    /**
-     * 是否是我们发起的权限请求
-     */
     fun isOurPermissionRequest(requestCode: Int): Boolean =
         requestCode == SHIZUKU_PERMISSION_REQUEST_CODE
 
     /**
-     * 通过 Shizuku 执行 shell 命令
+     * 通过反射调用 Shizuku.newProcess 执行 shell 命令
      */
     suspend fun exec(command: String): ShellResult = withContext(Dispatchers.IO) {
         try {
@@ -100,7 +76,16 @@ object ShizukuHelper {
                 return@withContext ShellResult(false, "", "Shizuku 未运行或未授权")
             }
 
-            val process = Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
+            // 反射调用 Shizuku.newProcess(String[], String[], String)
+            val method = Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            )
+            method.isAccessible = true
+            val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
+
             val stdout = BufferedReader(InputStreamReader(process.inputStream)).readText()
             val stderr = BufferedReader(InputStreamReader(process.errorStream)).readText()
             process.waitFor()
