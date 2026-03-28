@@ -3,10 +3,49 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- 圆形背景 -->
     <path
         android:fillColor="#1976D2"
-        android:pathData="M0,0h108v108H0z" />
+        android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0" />
+    <!-- 信号塔底座 -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M34,54 L44,44 L38,44 L38,34 L30,34 L30,44 L24,44 Z M54,30 L64,40 L58,40 L58,50 L50,50 L50,40 L44,40 Z M74,54 L84,64 L78,64 L78,74 L70,74 L70,64 L64,64 Z" />
+        android:pathData="M50,78 L58,78 L58,58 L50,58 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M46,78 L62,78 L62,82 L46,82 Z" />
+    <!-- 信号塔主体 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M52,42 L56,42 L56,58 L52,58 Z" />
+    <!-- 顶部三角 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30 L59,42 L49,42 Z" />
+    <!-- 信号波纹 左 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M38,44 Q42,38 42,32" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M34,46 Q40,36 40,28" />
+    <!-- 信号波纹 右 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M70,44 Q66,38 66,32" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M74,46 Q68,36 68,28" />
 </vector>
