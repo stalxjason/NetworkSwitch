@@ -14,7 +14,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * 网络模式切换桌面 Widget (2×1 布局)
+ * 网络模式切换桌面 Widget (3×1 白底布局)
  *
  * 左: 4G  |  中: 切换按钮  |  右: 5G
  * 当前模式高亮，非当前模式灰显。
@@ -80,14 +80,14 @@ class NetworkWidgetProvider : AppWidgetProvider() {
         val currentMode = NetworkModeHelper.getCurrentMode(context)
         val is5G = currentMode == NetworkMode.NR_5G
 
-        // 4G 标签：当前模式高亮蓝色，否则灰显
+        // 4G 标签：当前模式高亮，否则灰显（白底配色）
         if (is5G) {
-            views.setInt(R.id.tv_4g, "setTextColor", 0x55FFFFFF.toInt())  // 灰色
+            views.setInt(R.id.tv_4g, "setTextColor", 0xFFCCCCCC.toInt())  // 灰色
             views.setInt(R.id.tv_5g, "setTextColor", 0xFF4CAF50.toInt())  // 绿色
             views.setImageViewResource(R.id.iv_toggle, R.drawable.ic_toggle_switch_5g)
         } else {
             views.setInt(R.id.tv_4g, "setTextColor", 0xFF2196F3.toInt())  // 蓝色
-            views.setInt(R.id.tv_5g, "setTextColor", 0x55FFFFFF.toInt())  // 灰色
+            views.setInt(R.id.tv_5g, "setTextColor", 0xFFCCCCCC.toInt())  // 灰色
             views.setImageViewResource(R.id.iv_toggle, R.drawable.ic_toggle_switch)
         }
 

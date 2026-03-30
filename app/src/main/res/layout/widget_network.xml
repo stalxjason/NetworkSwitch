@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
-    android:padding="6dp">
+    android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -20,14 +20,13 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="4G"
-            android:textSize="16sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="#2196F3"
             android:gravity="center" />
 
         <!-- 中间切换按钮 -->
         <FrameLayout
-            android:id="@+id/btn_toggle"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
@@ -35,8 +34,8 @@
 
             <ImageView
                 android:id="@+id/iv_toggle"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_toggle_switch"
                 android:contentDescription="切换" />
@@ -50,9 +49,9 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="5G"
-            android:textSize="16sp"
+            android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="#55FFFFFF"
+            android:textColor="#CCCCCC"
             android:gravity="center" />
 
     </LinearLayout>
