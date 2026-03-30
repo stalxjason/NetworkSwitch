@@ -108,6 +108,11 @@ class MainActivity : AppCompatActivity() {
             is ShizukuHelper.Status.Authorized -> "✅ Shizuku 已就绪"
             else -> "授权 Shizuku"
         }
+
+        // 获取内网 IP
+        val ip = IpHelper.getLocalIp()
+        binding.tvIpv4.text = "IPv4: ${ip.ipv4 ?: "未获取到"}"
+        binding.tvIpv6.text = "IPv6: ${ip.ipv6 ?: "未获取到"}"
     }
 
     private fun performToggle() {
