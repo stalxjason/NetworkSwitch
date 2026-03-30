@@ -113,6 +113,15 @@ class MainActivity : AppCompatActivity() {
         val ip = IpHelper.getLocalIp()
         binding.tvIpv4.text = "IPv4: ${ip.ipv4 ?: "未获取到"}"
         binding.tvIpv6.text = "IPv6: ${ip.ipv6 ?: "未获取到"}"
+
+        // 异步获取外网 IP
+        lifecycleScope.launch {
+            val (pub4, pub6) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                IpHelper.getPublicIp()
+            }
+            binding.tvPublicIpv4.text = "IPv4: ${pub4 ?: "未获取到"}"
+            binding.tvPublicIpv6.text = "IPv6: ${pub6 ?: "未获取到"}"
+        }
     }
 
     private fun performToggle() {

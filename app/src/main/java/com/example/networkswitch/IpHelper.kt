@@ -1,17 +1,21 @@
 package com.example.networkswitch
 
+import java.net.HttpURLConnection
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.NetworkInterface
+import java.net.URL
 
 /**
- * 获取本机内网 IP（IPv4 / IPv6）
+ * 获取本机内网/外网 IP（IPv4 / IPv6）
  */
 object IpHelper {
 
     data class LocalIp(
         val ipv4: String? = null,
-        val ipv6: String? = null
+        val ipv6: String? = null,
+        val publicIpv4: String? = null,
+        val publicIpv6: String? = null
     )
 
     /**
@@ -51,5 +55,26 @@ object IpHelper {
         } catch (_: Exception) {}
 
         return LocalIp(ipv4, ipv6)
+    }
+
+    /**
+     * 查询外网 IP（阻塞调用，请在后台线程执行）
+     */
+    fun getPublicIp(): Pair<String?, String?> {
+        val v4 = fetchUrl("https://4.ipw.cn")
+        val v6 = fetchUrl("https://6.ipw.cn")
+        return v4 to v6
+    }
+
+    private fun fetchUrl(url: String): String? {
+        return try {
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+            conn.requestMethod = "GET"
+            if (conn.responseCode == 200) {
+                conn.inputStream.bufferedReader().readText().trim()
+            } else null
+        } catch (_: Exception) { null }
     }
 }
