@@ -14,9 +14,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * 网络模式切换桌面 Widget
+ * 网络模式切换桌面 Widget (2×1 布局)
  *
- * 切换优先使用 Shizuku，其次 Root，最后回退到打开系统设置。
+ * 左: 4G  |  中: 切换按钮  |  右: 5G
+ * 当前模式高亮，非当前模式灰显。
  */
 class NetworkWidgetProvider : AppWidgetProvider() {
 
@@ -62,7 +63,6 @@ class NetworkWidgetProvider : AppWidgetProvider() {
             }
             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
 
-            // 更新所有 Widget 实例
             val appWidgetManager = AppWidgetManager.getInstance(context)
             val ids = appWidgetManager.getAppWidgetIds(
                 ComponentName(context, NetworkWidgetProvider::class.java)
@@ -77,18 +77,21 @@ class NetworkWidgetProvider : AppWidgetProvider() {
         widgetId: Int
     ) {
         val views = RemoteViews(context.packageName, R.layout.widget_network)
-
         val currentMode = NetworkModeHelper.getCurrentMode(context)
-        views.setTextViewText(R.id.tv_network_mode, currentMode.label)
+        val is5G = currentMode == NetworkMode.NR_5G
 
-        // 5G 绿色，4G 蓝色
-        if (currentMode == NetworkMode.NR_5G) {
-            views.setInt(R.id.tv_network_mode, "setTextColor", 0xFF4CAF50.toInt())
+        // 4G 标签：当前模式高亮蓝色，否则灰显
+        if (is5G) {
+            views.setInt(R.id.tv_4g, "setTextColor", 0x55FFFFFF.toInt())  // 灰色
+            views.setInt(R.id.tv_5g, "setTextColor", 0xFF4CAF50.toInt())  // 绿色
+            views.setImageViewResource(R.id.iv_toggle, R.drawable.ic_toggle_switch_5g)
         } else {
-            views.setInt(R.id.tv_network_mode, "setTextColor", 0xFF2196F3.toInt())
+            views.setInt(R.id.tv_4g, "setTextColor", 0xFF2196F3.toInt())  // 蓝色
+            views.setInt(R.id.tv_5g, "setTextColor", 0x55FFFFFF.toInt())  // 灰色
+            views.setImageViewResource(R.id.iv_toggle, R.drawable.ic_toggle_switch)
         }
 
-        // 点击 → 切换
+        // 整个 widget 点击 → 切换
         val toggleIntent = Intent(context, NetworkWidgetProvider::class.java).apply {
             action = ACTION_TOGGLE
         }

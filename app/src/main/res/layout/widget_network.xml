@@ -4,30 +4,56 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
-    android:padding="12dp">
+    android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:weightSum="3">
 
+        <!-- 4G 标签 -->
         <TextView
-            android:layout_width="wrap_content"
+            android:id="@+id/tv_4g"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="网络模式"
-            android:textSize="11sp"
-            android:textColor="#88FFFFFF" />
-
-        <TextView
-            android:id="@+id/tv_network_mode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="4G"
-            android:textSize="32sp"
+            android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:layout_marginTop="2dp" />
+            android:textColor="#2196F3"
+            android:gravity="center" />
+
+        <!-- 中间切换按钮 -->
+        <FrameLayout
+            android:id="@+id/btn_toggle"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center">
+
+            <ImageView
+                android:id="@+id/iv_toggle"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_toggle_switch"
+                android:contentDescription="切换" />
+
+        </FrameLayout>
+
+        <!-- 5G 标签 -->
+        <TextView
+            android:id="@+id/tv_5g"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="5G"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="#55FFFFFF"
+            android:gravity="center" />
 
     </LinearLayout>
 

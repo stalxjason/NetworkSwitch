@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { background: #1a1a2e; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: -apple-system, sans-serif; }
+  .label { color: #888; font-size: 14px; margin-bottom: 12px; }
+  .widget {
+    width: 320px; height: 80px;
+    background: linear-gradient(135deg, #1A237E, #0D47A1);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; box-sizing: border-box;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .mode-label {
+    font-size: 22px; font-weight: 700; color: rgba(255,255,255,0.35);
+    width: 60px; text-align: center; user-select: none;
+  }
+  .mode-label.active-4g { color: #2196F3; }
+  .mode-label.active-5g { color: #4CAF50; }
+  .switch-area {
+    position: relative; width: 72px; height: 36px;
+    cursor: pointer;
+  }
+  .switch-track {
+    width: 72px; height: 36px; border-radius: 18px;
+    background: rgba(255,255,255,0.15);
+    transition: background 0.3s;
+  }
+  .switch-track.on-5g { background: rgba(76,175,80,0.4); }
+  .switch-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: left 0.3s;
+  }
+  .switch-thumb.on-5g { left: 39px; }
+  .hint { color: #666; font-size: 12px; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="label">当前模式：4G</div>
+<div class="widget" id="w1">
+  <div class="mode-label active-4g">4G</div>
+  <div class="switch-area" onclick="toggle(this)">
+    <div class="switch-track"></div>
+    <div class="switch-thumb"></div>
+  </div>
+  <div class="mode-label">5G</div>
+</div>
+<div class="hint">← 点击中间开关切换 →</div>
+
+<br><br>
+<div class="label">当前模式：5G</div>
+<div class="widget">
+  <div class="mode-label">4G</div>
+  <div class="switch-area">
+    <div class="switch-track on-5g"></div>
+    <div class="switch-thumb on-5g"></div>
+  </div>
+  <div class="mode-label active-5g">5G</div>
+</div>
+
+<script>
+function toggle(el) {
+  const widget = el.closest('.widget');
+  const thumb = el.querySelector('.switch-thumb');
+  const track = el.querySelector('.switch-track');
+  const labels = widget.querySelectorAll('.mode-label');
+  const is5g = thumb.classList.toggle('on-5g');
+  track.classList.toggle('on-5g', is5g);
+  labels[0].className = 'mode-label' + (is5g ? '' : ' active-4g');
+  labels[1].className = 'mode-label' + (is5g ? ' active-5g' : '');
+}
+</script>
+</body>
+</html>
