@@ -71,8 +71,9 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.btnRefresh.setOnClickListener { refreshStatus() }
-        // 点击外网 IP 区域手动查询
-        binding.cardIp.setOnClickListener { fetchPublicIp() }
+        // 点击外网 IP 手动查询
+        binding.tvPublicIpv4.setOnClickListener { fetchPublicIp() }
+        binding.tvPublicIpv6.setOnClickListener { fetchPublicIp() }
     }
 
     private fun fetchPublicIp() {
