@@ -1,8 +1,14 @@
 package io.github.stalxjason.networkswitch
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.NetworkInterface
+import java.net.URL
 
 /**
  * 获取本机网络接口 IP 列表
@@ -62,15 +68,15 @@ object IpHelper {
     /**
      * 并行查询外网 IPv4 和 IPv6（suspend 函数）
      */
-    suspend fun getPublicIp(): Pair<String?, String?> = kotlinx.coroutines.coroutineScope {
-        val v4Deferred = kotlinx.coroutines.async { fetchUrl("https://4.ipw.cn") }
-        val v6Deferred = kotlinx.coroutines.async { fetchUrl("https://6.ipw.cn") }
+    suspend fun getPublicIp(): Pair<String?, String?> = coroutineScope {
+        val v4Deferred = async { fetchUrl("https://4.ipw.cn") }
+        val v6Deferred = async { fetchUrl("https://6.ipw.cn") }
         v4Deferred.await() to v6Deferred.await()
     }
 
-    private suspend fun fetchUrl(url: String): String? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    private suspend fun fetchUrl(url: String): String? = withContext(Dispatchers.IO) {
         try {
-            val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            val conn = URL(url).openConnection() as HttpURLConnection
             conn.connectTimeout = 5000
             conn.readTimeout = 5000
             conn.requestMethod = "GET"
