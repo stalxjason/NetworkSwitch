@@ -2,7 +2,6 @@ package io.github.stalxjason.networkswitch
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
 
 /**
@@ -26,22 +25,27 @@ object NetworkInfoHelper {
             ?: return SignalInfo(null, null, 0, null)
 
         val carrierName = tm.networkOperatorName?.takeIf { it.isNotBlank() }
-        val networkType = getNetworkTypeName(tm.dataNetworkType)
+
+        var networkTypeName: String? = null
+        try {
+            networkTypeName = getNetworkTypeName(tm.dataNetworkType)
+        } catch (_: SecurityException) {}
 
         // SignalStrength 在 Android 12+ 可以通过 getCurrentSignalStrength 同步获取
         var dbm: Int? = null
         var level = 0
         try {
-            val ss = tm.signalStrength ?: return SignalInfo(carrierName, null, 0, networkType)
+            val ss = tm.signalStrength ?: return SignalInfo(carrierName, null, 0, networkTypeName)
             for (i in 0 until ss.cellSignalStrengths.size) {
                 val cs = ss.cellSignalStrengths[i]
                 dbm = cs.dbm
                 level = cs.level  // 0-4
                 break
             }
-        } catch (_: Exception) {}
+        } catch (_: SecurityException) {}
+        catch (_: Exception) {}
 
-        return SignalInfo(carrierName, dbm, level, networkType)
+        return SignalInfo(carrierName, dbm, level, networkTypeName)
     }
 
     private fun getNetworkTypeName(type: Int): String? = when (type) {
