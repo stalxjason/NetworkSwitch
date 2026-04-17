@@ -1,4 +1,4 @@
-package com.example.networkswitch
+package io.github.stalxjason.networkswitch
 
 import org.junit.Assert.*
 import org.junit.Test

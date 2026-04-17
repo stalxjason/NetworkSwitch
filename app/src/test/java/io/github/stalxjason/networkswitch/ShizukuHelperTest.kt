@@ -1,4 +1,4 @@
-package com.example.networkswitch
+package io.github.stalxjason.networkswitch
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*

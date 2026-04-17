@@ -1,4 +1,4 @@
-package com.example.networkswitch
+package io.github.stalxjason.networkswitch
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 class NetworkWidgetProvider : AppWidgetProvider() {
 
     companion object {
-        const val ACTION_TOGGLE = "com.example.networkswitch.ACTION_TOGGLE"
+        const val ACTION_TOGGLE = "io.github.stalxjason.networkswitch.ACTION_TOGGLE"
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
         fun updateWidget(context: Context) {

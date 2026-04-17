@@ -1,4 +1,4 @@
-package com.example.networkswitch
+package io.github.stalxjason.networkswitch
 
 import android.content.pm.PackageManager
 import android.util.Log

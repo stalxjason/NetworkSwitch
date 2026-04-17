@@ -1,4 +1,4 @@
-package com.example.networkswitch
+package io.github.stalxjason.networkswitch
 
 /**
  * 网络模式枚举

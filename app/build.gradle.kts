@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.networkswitch"
+    namespace = "io.github.stalxjason.networkswitch"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.networkswitch"
+        applicationId = "io.github.stalxjason.networkswitch"
         minSdk = 31
         targetSdk = 36
         versionCode = 1
@@ -26,7 +26,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

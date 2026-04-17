@@ -1,4 +1,4 @@
-package com.example.networkswitch
+package io.github.stalxjason.networkswitch
 
 import android.content.Intent
 import android.os.Bundle
@@ -6,7 +6,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.example.networkswitch.databinding.ActivityMainBinding
+import io.github.stalxjason.networkswitch.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
