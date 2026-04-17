@@ -1,42 +1,39 @@
 package io.github.stalxjason.networkswitch
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import java.net.HttpURLConnection
 import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.NetworkInterface
-import java.net.URL
 
 /**
- * 获取本机内网/外网 IP（IPv4 / IPv6）
+ * 获取本机网络接口 IP 列表
  */
 object IpHelper {
 
-    data class LocalIp(
-        val ipv4: String? = null,
-        val ipv6: String? = null,
-        val publicIpv4: String? = null,
-        val publicIpv6: String? = null
+    data class InterfaceIp(
+        val ifaceName: String,   // 接口名，如 rmnet0、wlan0
+        val ipv4: String?,
+        val ipv6: String?
     )
 
     /**
-     * 遍历网络接口，取第一个有效的内网 IPv4 和 IPv6
+     * 获取所有活跃网络接口的 IP 列表
      * 排除 lo / docker / vbox 等虚拟接口
+     * 排除 link-local IPv6 (fe80::)
      */
-    fun getLocalIp(): LocalIp {
-        var ipv4: String? = null
-        var ipv6: String? = null
+    fun getAllInterfaceIps(): List<InterfaceIp> {
+        val result = mutableListOf<InterfaceIp>()
 
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces()
             for (iface in interfaces) {
                 if (iface.isLoopback || !iface.isUp) continue
                 val name = iface.name.lowercase()
-                // 跳过常见虚拟接口
                 if (name.startsWith("docker") || name.startsWith("vbox") ||
                     name.startsWith("virbr") || name.startsWith("br-") ||
                     name.startsWith("tun") || name.startsWith("tap")) continue
+
+                var ipv4: String? = null
+                var ipv6: String? = null
 
                 for (addr in iface.inetAddresses) {
                     if (addr.isLoopbackAddress) continue
@@ -46,31 +43,34 @@ object IpHelper {
                         }
                         addr is Inet6Address && ipv6 == null -> {
                             val raw = addr.hostAddress ?: continue
-                            // 跳过 link-local (fe80::)
                             if (raw.startsWith("fe80")) continue
                             ipv6 = raw
                         }
                     }
                 }
-                if (ipv4 != null && ipv6 != null) break
+
+                // 至少有一个 IP 才添加
+                if (ipv4 != null || ipv6 != null) {
+                    result.add(InterfaceIp(iface.name, ipv4, ipv6))
+                }
             }
         } catch (_: Exception) {}
 
-        return LocalIp(ipv4, ipv6)
+        return result
     }
 
     /**
      * 并行查询外网 IPv4 和 IPv6（suspend 函数）
      */
-    suspend fun getPublicIp(): Pair<String?, String?> = coroutineScope {
-        val v4Deferred = async { fetchUrl("https://4.ipw.cn") }
-        val v6Deferred = async { fetchUrl("https://6.ipw.cn") }
+    suspend fun getPublicIp(): Pair<String?, String?> = kotlinx.coroutines.coroutineScope {
+        val v4Deferred = kotlinx.coroutines.async { fetchUrl("https://4.ipw.cn") }
+        val v6Deferred = kotlinx.coroutines.async { fetchUrl("https://6.ipw.cn") }
         v4Deferred.await() to v6Deferred.await()
     }
 
     private suspend fun fetchUrl(url: String): String? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         try {
-            val conn = URL(url).openConnection() as HttpURLConnection
+            val conn = java.net.URL(url).openConnection() as java.net.HttpURLConnection
             conn.connectTimeout = 5000
             conn.readTimeout = 5000
             conn.requestMethod = "GET"
