@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -80,14 +81,15 @@ class NetworkWidgetProvider : AppWidgetProvider() {
         val currentMode = NetworkModeHelper.getCurrentMode(context)
         val is5G = currentMode == NetworkMode.NR_5G
 
-        // 4G 标签：当前模式高亮，否则灰显（白底配色）
+        // 4G 标签：当前模式高亮，否则灰显
+        val colorInactive = ContextCompat.getColor(context, R.color.widget_color_inactive)
         if (is5G) {
-            views.setInt(R.id.tv_4g, "setTextColor", 0xFFCCCCCC.toInt())  // 灰色
-            views.setInt(R.id.tv_5g, "setTextColor", 0xFF4CAF50.toInt())  // 绿色
+            views.setInt(R.id.tv_4g, "setTextColor", colorInactive)
+            views.setInt(R.id.tv_5g, "setTextColor", ContextCompat.getColor(context, R.color.widget_color_5g_active))
             views.setImageViewResource(R.id.iv_toggle, R.drawable.ic_toggle_switch_5g)
         } else {
-            views.setInt(R.id.tv_4g, "setTextColor", 0xFF2196F3.toInt())  // 蓝色
-            views.setInt(R.id.tv_5g, "setTextColor", 0xFFCCCCCC.toInt())  // 灰色
+            views.setInt(R.id.tv_4g, "setTextColor", ContextCompat.getColor(context, R.color.widget_color_4g_active))
+            views.setInt(R.id.tv_5g, "setTextColor", colorInactive)
             views.setImageViewResource(R.id.iv_toggle, R.drawable.ic_toggle_switch)
         }
 

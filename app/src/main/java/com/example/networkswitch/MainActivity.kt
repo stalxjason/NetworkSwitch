@@ -82,9 +82,7 @@ class MainActivity : AppCompatActivity() {
         binding.tvPublicIpv4.text = "IPv4: 查询中..."
         binding.tvPublicIpv6.text = "IPv6: 查询中..."
         lifecycleScope.launch {
-            val (pub4, pub6) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                IpHelper.getPublicIp()
-            }
+            val (pub4, pub6) = IpHelper.getPublicIp()
             binding.tvPublicIpv4.text = "IPv4: ${pub4 ?: "未获取到"}"
             binding.tvPublicIpv6.text = "IPv6: ${pub6 ?: "未获取到"}"
         }

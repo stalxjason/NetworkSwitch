@@ -1,5 +1,7 @@
 package com.example.networkswitch
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import java.net.HttpURLConnection
 import java.net.Inet4Address
 import java.net.Inet6Address
@@ -58,16 +60,16 @@ object IpHelper {
     }
 
     /**
-     * 查询外网 IP（阻塞调用，请在后台线程执行）
+     * 并行查询外网 IPv4 和 IPv6（suspend 函数）
      */
-    fun getPublicIp(): Pair<String?, String?> {
-        val v4 = fetchUrl("https://4.ipw.cn")
-        val v6 = fetchUrl("https://6.ipw.cn")
-        return v4 to v6
+    suspend fun getPublicIp(): Pair<String?, String?> = coroutineScope {
+        val v4Deferred = async { fetchUrl("https://4.ipw.cn") }
+        val v6Deferred = async { fetchUrl("https://6.ipw.cn") }
+        v4Deferred.await() to v6Deferred.await()
     }
 
-    private fun fetchUrl(url: String): String? {
-        return try {
+    private suspend fun fetchUrl(url: String): String? = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
             val conn = URL(url).openConnection() as HttpURLConnection
             conn.connectTimeout = 5000
             conn.readTimeout = 5000
