@@ -63,7 +63,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 else -> Toast.makeText(this, "请先安装 Shizuku", Toast.LENGTH_LONG).show()
             }
-            refreshStatus()
+            lifecycleScope.launch { refreshStatus() }
         }
         binding.btnOpenSettings.setOnClickListener {
             try {
