@@ -167,7 +167,7 @@ class MainActivity : AppCompatActivity() {
         if (info.signalLevel > 0) {
             parts.add("${info.signalLevel}/4 格")
         }
-        return parts.ifEmpty { "无信号" }.joinToString("  |  ")
+        return parts.ifEmpty { listOf("无信号") }.joinToString("  |  ")
     }
 
     /**
