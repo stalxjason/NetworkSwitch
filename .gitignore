@@ -8,9 +8,11 @@
 /captures
 .externalNativeBuild
 .cxx
-local.properties
 /app/release
 *.apk
 *.ap_
 *.aab
 *.keystore
+
+# 防止嵌套项目副本
+/NetworkSwitch/

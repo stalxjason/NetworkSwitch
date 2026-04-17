@@ -8,6 +8,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.networkswitch.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
 class MainActivity : AppCompatActivity() {
@@ -18,7 +20,7 @@ class MainActivity : AppCompatActivity() {
         Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
             if (ShizukuHelper.isOurPermissionRequest(requestCode)) {
                 val granted = grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED
-                refreshStatus()
+                lifecycleScope.launch { refreshStatus() }
                 Toast.makeText(
                     this,
                     if (granted) "Shizuku 授权成功 ✅" else "Shizuku 授权被拒绝",
@@ -35,7 +37,7 @@ class MainActivity : AppCompatActivity() {
 
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         setupUI()
-        refreshStatus()
+        lifecycleScope.launch { refreshStatus() }
     }
 
     override fun onDestroy() {
@@ -45,7 +47,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        refreshStatus()
+        lifecycleScope.launch { refreshStatus() }
     }
 
     private fun setupUI() {
@@ -70,7 +72,7 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
             }
         }
-        binding.btnRefresh.setOnClickListener { refreshStatus() }
+        binding.btnRefresh.setOnClickListener { lifecycleScope.launch { refreshStatus() } }
         // 点击外网 IP 手动查询
         binding.tvPublicIpv4.setOnClickListener { fetchPublicIp() }
         binding.tvPublicIpv6.setOnClickListener { fetchPublicIp() }
@@ -96,38 +98,46 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) {}
     }
 
-    private fun refreshStatus() {
-        val currentMode = NetworkModeHelper.getCurrentMode(this)
-        binding.tvCurrentMode.text = currentMode.label
-        binding.tvModeDesc.text = when (currentMode) {
-            NetworkMode.LTE -> "当前使用 4G LTE 网络"
-            NetworkMode.NR_5G -> "当前使用 5G NR 网络"
+    private suspend fun refreshStatus() = withContext(Dispatchers.IO) {
+        val currentMode = NetworkModeHelper.getCurrentMode(this@MainActivity)
+        withContext(Dispatchers.Main) {
+            binding.tvCurrentMode.text = currentMode.label
+            binding.tvModeDesc.text = when (currentMode) {
+                NetworkMode.LTE -> "当前使用 4G LTE 网络"
+                NetworkMode.NR_5G -> "当前使用 5G NR 网络"
+            }
         }
 
         val shizukuStatus = ShizukuHelper.getStatus()
-        binding.tvShizukuStatus.text = when (shizukuStatus) {
-            is ShizukuHelper.Status.Authorized -> "✅ Shizuku 已授权 — 可一键切换"
-            is ShizukuHelper.Status.Running -> "⚠️ Shizuku 运行中 — 点击授权"
-            is ShizukuHelper.Status.NotRunning -> "⚠️ Shizuku 未运行 — 请启动 Shizuku"
-            is ShizukuHelper.Status.NotInstalled -> "❌ 未安装 Shizuku"
+        withContext(Dispatchers.Main) {
+            binding.tvShizukuStatus.text = when (shizukuStatus) {
+                is ShizukuHelper.Status.Authorized -> "✅ Shizuku 已授权 — 可一键切换"
+                is ShizukuHelper.Status.Running -> "⚠️ Shizuku 运行中 — 点击授权"
+                is ShizukuHelper.Status.NotRunning -> "⚠️ Shizuku 未运行 — 请启动 Shizuku"
+                is ShizukuHelper.Status.NotInstalled -> "❌ 未安装 Shizuku"
+            }
         }
 
         val hasRoot = NetworkModeHelper.hasRootAccess()
-        binding.tvRootStatus.text = if (hasRoot) "✅ Root 可用" else "Root 不可用"
+        withContext(Dispatchers.Main) {
+            binding.tvRootStatus.text = if (hasRoot) "✅ Root 可用" else "Root 不可用"
 
-        val canToggle = ShizukuHelper.isAvailable() || hasRoot
-        binding.btnToggle.isEnabled = canToggle
-        binding.btnToggle.text = if (canToggle) "切换 4G/5G" else "需要 Shizuku 或 Root"
+            val canToggle = ShizukuHelper.isAvailable() || hasRoot
+            binding.btnToggle.isEnabled = canToggle
+            binding.btnToggle.text = if (canToggle) "切换 4G/5G" else "需要 Shizuku 或 Root"
 
-        binding.btnShizukuAuth.text = when (shizukuStatus) {
-            is ShizukuHelper.Status.Authorized -> "✅ Shizuku 已就绪"
-            else -> "授权 Shizuku"
+            binding.btnShizukuAuth.text = when (shizukuStatus) {
+                is ShizukuHelper.Status.Authorized -> "✅ Shizuku 已就绪"
+                else -> "授权 Shizuku"
+            }
         }
 
         // 获取内网 IP
         val ip = IpHelper.getLocalIp()
-        binding.tvIpv4.text = "IPv4: ${ip.ipv4 ?: "未获取到"}"
-        binding.tvIpv6.text = "IPv6: ${ip.ipv6 ?: "未获取到"}"
+        withContext(Dispatchers.Main) {
+            binding.tvIpv4.text = "IPv4: ${ip.ipv4 ?: "未获取到"}"
+            binding.tvIpv6.text = "IPv6: ${ip.ipv6 ?: "未获取到"}"
+        }
     }
 
     private fun performToggle() {

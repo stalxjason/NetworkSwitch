@@ -5,6 +5,7 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.DataOutputStream
+import java.util.concurrent.TimeUnit
 
 /**
  * 网络模式切换核心工具类
@@ -77,10 +78,12 @@ object NetworkModeHelper {
         return result
     }
 
+    private val ROOT_TIMEOUT_SECONDS = 10L
+
     /**
      * Root 方案
      */
-    private fun tryRootSwitch(target: NetworkMode): Boolean {
+    private suspend fun tryRootSwitch(target: NetworkMode): Boolean {
         return try {
             val commands = listOf(
                 "cmd phone set-allowed-network-types-for-users -s 0 ${target.allowedTypesMask}",
@@ -103,17 +106,26 @@ object NetworkModeHelper {
             }
             os.writeBytes("exit\n")
             os.flush()
-            process.waitFor()
+            val finished = process.waitFor(ROOT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroyForcibly()
+                Log.w(TAG, "Root command timed out after ${ROOT_TIMEOUT_SECONDS}s")
+                return false
+            }
             process.exitValue() == 0
         } catch (e: Exception) {
             false
         }
     }
 
-    fun hasRootAccess(): Boolean {
-        return try {
+    suspend fun hasRootAccess(): Boolean = withContext(Dispatchers.IO) {
+        try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-            process.waitFor()
+            val finished = process.waitFor(ROOT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroyForcibly()
+                return@withContext false
+            }
             val output = process.inputStream.bufferedReader().readText()
             output.contains("uid=0")
         } catch (e: Exception) {
