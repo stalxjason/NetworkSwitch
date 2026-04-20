@@ -2,50 +2,87 @@ package io.github.stalxjason.networkswitch
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 
 /**
- * 获取移动网络信号强度和运营商信息
+ * 获取移动网络信号强度、运营商信息（支持双卡）
  */
 object NetworkInfoHelper {
 
-    data class SignalInfo(
-        val carrierName: String?,        // 运营商名称
-        val signalStrengthDbm: Int?,     // 信号强度 dBm（负值）
-        val signalLevel: Int,            // 信号格数 0-4
-        val networkTypeName: String?     // 网络类型，如 LTE、NR
+    data class SimInfo(
+        val slotIndex: Int,          // 0-based slot，0=SIM1，1=SIM2
+        val carrierName: String?,    // 运营商名称
+        val networkTypeName: String?,// 网络类型，如 LTE、5G NR
+        val isDataSim: Boolean       // 是否是当前数据卡
     )
 
-    /**
-     * 同步获取当前信号信息
-     */
+    data class SignalInfo(
+        val sims: List<SimInfo>,     // 所有已插卡槽信息
+        val signalStrengthDbm: Int?, // 当前数据卡信号强度 dBm
+        val signalLevel: Int         // 当前数据卡信号格数 0-4
+    )
+
     @SuppressLint("MissingPermission")
     fun getSignalInfo(context: Context): SignalInfo {
         val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
-            ?: return SignalInfo(null, null, 0, null)
+            ?: return SignalInfo(emptyList(), null, 0)
 
-        val carrierName = tm.networkOperatorName?.takeIf { it.isNotBlank() }
+        val subManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
+                as? SubscriptionManager
+            ?: return SignalInfo(emptyList(), null, 0)
 
-        var networkTypeName: String? = null
+        // 当前数据卡 subscriptionId
+        val activeDataSubId = try {
+            SubscriptionManager.getDefaultDataSubscriptionId()
+        } catch (_: Exception) { SubscriptionManager.INVALID_SUBSCRIPTION_ID }
+
+        // 读取所有已插 SIM
+        val sims = mutableListOf<SimInfo>()
         try {
-            networkTypeName = getNetworkTypeName(tm.dataNetworkType)
-        } catch (_: SecurityException) {}
+            val subs = subManager.activeSubscriptionInfoList ?: emptyList()
+            for (sub in subs) {
+                val slotIdx = sub.simSlotIndex
+                val tmForSub = tm.createForSubscriptionId(sub.subscriptionId)
+                val carrier = tmForSub.networkOperatorName?.takeIf { it.isNotBlank() }
+                    ?: sub.carrierName?.toString()?.takeIf { it.isNotBlank() }
+                var netType: String? = null
+                try {
+                    netType = getNetworkTypeName(tmForSub.dataNetworkType)
+                } catch (_: SecurityException) {}
+                sims.add(SimInfo(
+                    slotIndex = slotIdx,
+                    carrierName = carrier,
+                    networkTypeName = netType,
+                    isDataSim = (sub.subscriptionId == activeDataSubId)
+                ))
+            }
+        } catch (_: Exception) {}
 
-        // SignalStrength 在 Android 12+ 可以通过 getCurrentSignalStrength 同步获取
+        // 如果 SubscriptionManager 没数据，降级到单卡
+        if (sims.isEmpty()) {
+            val carrier = tm.networkOperatorName?.takeIf { it.isNotBlank() }
+            var netType: String? = null
+            try { netType = getNetworkTypeName(tm.dataNetworkType) } catch (_: SecurityException) {}
+            sims.add(SimInfo(0, carrier, netType, true))
+        }
+
+        // 信号强度取当前数据卡
         var dbm: Int? = null
         var level = 0
         try {
-            val ss = tm.signalStrength ?: return SignalInfo(carrierName, null, 0, networkTypeName)
-            for (i in 0 until ss.cellSignalStrengths.size) {
-                val cs = ss.cellSignalStrengths[i]
-                dbm = cs.dbm
-                level = cs.level  // 0-4
-                break
+            val ss = tm.signalStrength
+            if (ss != null) {
+                for (cs in ss.cellSignalStrengths) {
+                    dbm = cs.dbm
+                    level = cs.level
+                    break
+                }
             }
         } catch (_: SecurityException) {}
         catch (_: Exception) {}
 
-        return SignalInfo(carrierName, dbm, level, networkTypeName)
+        return SignalInfo(sims, dbm, level)
     }
 
     private fun getNetworkTypeName(type: Int): String? = when (type) {

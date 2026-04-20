@@ -1,19 +1,21 @@
 package io.github.stalxjason.networkswitch
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
-import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import io.github.stalxjason.networkswitch.databinding.ActivityMainBinding
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
@@ -21,10 +23,18 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    // 运行时请求 READ_PHONE_STATE 权限
+    private val requestPhonePermission = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        // 无论授权与否都刷新，拒绝时降级显示
+        lifecycleScope.launch { refreshStatus() }
+    }
+
     private val shizukuPermissionListener =
         Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
             if (ShizukuHelper.isOurPermissionRequest(requestCode)) {
-                val granted = grantResult == android.content.pm.PackageManager.PERMISSION_GRANTED
+                val granted = grantResult == PackageManager.PERMISSION_GRANTED
                 lifecycleScope.launch { refreshStatus() }
                 Toast.makeText(
                     this,
@@ -42,7 +52,19 @@ class MainActivity : AppCompatActivity() {
 
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         setupUI()
-        lifecycleScope.launch { refreshStatus() }
+
+        // 请求电话权限后刷新；已有权限直接刷新
+        val permsNeeded = arrayOf(
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_BASIC_PHONE_STATE
+        ).filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (permsNeeded.isNotEmpty()) {
+            requestPhonePermission.launch(permsNeeded.toTypedArray())
+        } else {
+            lifecycleScope.launch { refreshStatus() }
+        }
     }
 
     override fun onDestroy() {
@@ -99,7 +121,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 信号与运营商
+        // 信号与运营商（双卡）
         val signalInfo = NetworkInfoHelper.getSignalInfo(this@MainActivity)
         withContext(Dispatchers.Main) {
             updateSignalBars(signalInfo.signalLevel)
@@ -110,7 +132,7 @@ class MainActivity : AppCompatActivity() {
         // IP 列表
         val ipList = IpHelper.getAllInterfaceIps()
         withContext(Dispatchers.Main) {
-            updateIpList(ipList)
+            updateIpList(ipList, signalInfo)
         }
 
         // Shizuku / Root 状态
@@ -139,41 +161,46 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 更新信号格数显示
-     */
     private fun updateSignalBars(level: Int) {
         val activeColor = ContextCompat.getColor(this, R.color.primary)
         val inactiveColor = ContextCompat.getColor(this, R.color.text_hint)
-        val barIds = listOf(
-            binding.signalBar1, binding.signalBar2,
-            binding.signalBar3, binding.signalBar4
-        )
-        barIds.forEachIndexed { index, bar ->
+        val bars = listOf(binding.signalBar1, binding.signalBar2, binding.signalBar3, binding.signalBar4)
+        bars.forEachIndexed { index, bar ->
             bar.setBackgroundColor(if (index < level) activeColor else inactiveColor)
         }
     }
 
+    /**
+     * 运营商文本（双卡）
+     * 例：SIM1 移动 · LTE ★  |  SIM2 联通 · 5G NR
+     */
     private fun buildCarrierText(info: NetworkInfoHelper.SignalInfo): String {
-        val parts = mutableListOf<String>()
-        info.carrierName?.let { parts.add(it) }
-        info.networkTypeName?.let { parts.add(it) }
-        return parts.ifEmpty { listOf("未知运营商") }.joinToString(" · ")
+        if (info.sims.isEmpty()) return "未知运营商"
+        return info.sims.joinToString("  |  ") { sim ->
+            val slot = "SIM${sim.slotIndex + 1}"
+            val carrier = sim.carrierName ?: "未知"
+            val netType = sim.networkTypeName?.let { " · $it" } ?: ""
+            val mark = if (sim.isDataSim) " ★" else ""
+            "$slot $carrier$netType$mark"
+        }
     }
 
     private fun buildSignalDetailText(info: NetworkInfoHelper.SignalInfo): String {
         val parts = mutableListOf<String>()
         info.signalStrengthDbm?.let { parts.add("${it} dBm") }
-        if (info.signalLevel > 0) {
-            parts.add("${info.signalLevel}/4 格")
-        }
+        if (info.signalLevel > 0) parts.add("${info.signalLevel}/4 格")
         return parts.ifEmpty { listOf("无信号") }.joinToString("  |  ")
     }
 
     /**
      * 动态生成 IP 列表
+     * 移动网络接口显示：SIM1 移动 ★ (rmnet_data0)
+     * 普通接口直接显示接口名
      */
-    private fun updateIpList(ipList: List<IpHelper.InterfaceIp>) {
+    private fun updateIpList(
+        ipList: List<IpHelper.InterfaceIp>,
+        signalInfo: NetworkInfoHelper.SignalInfo
+    ) {
         val container = binding.ipListContainer
         container.removeAllViews()
 
@@ -183,38 +210,51 @@ class MainActivity : AppCompatActivity() {
         }
 
         for ((index, iface) in ipList.withIndex()) {
-            // 接口名标签
-            val label = createIpTextView(iface.ifaceName)
+            val labelText = buildIfaceLabel(iface, signalInfo)
+            val label = createIpTextView(labelText)
             label.setTextColor(ContextCompat.getColor(this, R.color.text_primary))
             label.setTypeface(null, android.graphics.Typeface.BOLD)
             container.addView(label)
 
-            // IPv4
             iface.ipv4?.let {
                 val tv = createIpTextView("  IPv4  $it")
                 tv.typeface = android.graphics.Typeface.MONOSPACE
                 container.addView(tv)
             }
 
-            // IPv6
             iface.ipv6?.let {
                 val tv = createIpTextView("  IPv6  $it")
                 tv.typeface = android.graphics.Typeface.MONOSPACE
                 container.addView(tv)
             }
 
-            // 分隔线（非最后一个）
             if (index < ipList.size - 1) {
                 val divider = View(this).apply {
                     layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        1
+                        LinearLayout.LayoutParams.MATCH_PARENT, 1
                     ).apply { setMargins(0, 12, 0, 12) }
                     setBackgroundColor(0x22FFFFFF.toInt())
                 }
                 container.addView(divider)
             }
         }
+    }
+
+    /**
+     * 接口标签：
+     * - 有 simLabel（rmnet 类）：SIM1 移动 ★  (rmnet_data0)
+     * - 无 simLabel：wlan0 / eth0 等直接显示
+     */
+    private fun buildIfaceLabel(
+        iface: IpHelper.InterfaceIp,
+        signalInfo: NetworkInfoHelper.SignalInfo
+    ): String {
+        val simLabel = iface.simLabel ?: return iface.ifaceName
+        val slotIndex = simLabel.removePrefix("SIM").toIntOrNull()?.minus(1) ?: -1
+        val simInfo = signalInfo.sims.find { it.slotIndex == slotIndex }
+        val carrierPart = simInfo?.carrierName?.let { " $it" } ?: ""
+        val dataMark = if (simInfo?.isDataSim == true) " ★" else ""
+        return "$simLabel$carrierPart$dataMark  (${iface.ifaceName})"
     }
 
     private fun createIpTextView(text: String): TextView {

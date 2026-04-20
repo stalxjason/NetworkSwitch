@@ -18,13 +18,15 @@ object IpHelper {
     data class InterfaceIp(
         val ifaceName: String,   // 接口名，如 rmnet0、wlan0
         val ipv4: String?,
-        val ipv6: String?
+        val ipv6: String?,
+        val simLabel: String?    // 如 "SIM1"、"SIM2"、null（非移动网络接口）
     )
 
     /**
      * 获取所有活跃网络接口的 IP 列表
      * 排除 lo / docker / vbox 等虚拟接口
      * 排除 link-local IPv6 (fe80::)
+     * rmnet 接口会尝试推断对应的 SIM 卡编号
      */
     fun getAllInterfaceIps(): List<InterfaceIp> {
         val result = mutableListOf<InterfaceIp>()
@@ -55,14 +57,34 @@ object IpHelper {
                     }
                 }
 
-                // 至少有一个 IP 才添加
                 if (ipv4 != null || ipv6 != null) {
-                    result.add(InterfaceIp(iface.name, ipv4, ipv6))
+                    val simLabel = inferSimLabel(name)
+                    result.add(InterfaceIp(iface.name, ipv4, ipv6, simLabel))
                 }
             }
         } catch (_: Exception) {}
 
         return result
+    }
+
+    /**
+     * 根据接口名推断 SIM 卡编号
+     * rmnet_data0/rmnet0/ccmni0 -> SIM1
+     * rmnet_data1/rmnet1/ccmni1 -> SIM2
+     * 其他数字结尾的 rmnet 类接口也做类似推断
+     */
+    private fun inferSimLabel(name: String): String? {
+        val rmnetPrefixes = listOf("rmnet_data", "rmnet", "ccmni", "pdp", "wwan")
+        for (prefix in rmnetPrefixes) {
+            if (name.startsWith(prefix)) {
+                val suffix = name.removePrefix(prefix)
+                val num = suffix.trimStart('_').toIntOrNull()
+                if (num != null) {
+                    return "SIM${num + 1}"
+                }
+            }
+        }
+        return null
     }
 
     /**
