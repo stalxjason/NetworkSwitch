@@ -2,6 +2,8 @@ package io.github.stalxjason.networkswitch
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 
@@ -18,19 +20,20 @@ object NetworkInfoHelper {
     )
 
     data class SignalInfo(
-        val sims: List<SimInfo>,     // 所有已插卡槽信息
-        val signalStrengthDbm: Int?, // 当前数据卡信号强度 dBm
-        val signalLevel: Int         // 当前数据卡信号格数 0-4
+        val sims: List<SimInfo>,         // 所有已插卡槽信息
+        val signalStrengthDbm: Int?,     // 当前数据卡信号强度 dBm
+        val signalLevel: Int,            // 当前数据卡信号格数 0-4
+        val activeIfaceName: String?     // 当前数据移动网络接口名（如 rmnet_data1）
     )
 
     @SuppressLint("MissingPermission")
     fun getSignalInfo(context: Context): SignalInfo {
         val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
-            ?: return SignalInfo(emptyList(), null, 0)
+            ?: return SignalInfo(emptyList(), null, 0, null)
 
         val subManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
                 as? SubscriptionManager
-            ?: return SignalInfo(emptyList(), null, 0)
+            ?: return SignalInfo(emptyList(), null, 0, null)
 
         // 当前数据卡 subscriptionId
         val activeDataSubId = try {
@@ -82,7 +85,27 @@ object NetworkInfoHelper {
         } catch (_: SecurityException) {}
         catch (_: Exception) {}
 
-        return SignalInfo(sims, dbm, level)
+        // 获取当前活跃移动网络的接口名
+        val activeIface = getActiveMobileIfaceName(context)
+
+        return SignalInfo(sims, dbm, level, activeIface)
+    }
+
+    /** 获取当前活跃移动网络的接口名（如 rmnet_data1） */
+    private fun getActiveMobileIfaceName(context: Context): String? {
+        return try {
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+                ?: return null
+            val networks = cm.allNetworks
+            for (net in networks) {
+                val caps = cm.getNetworkCapabilities(net) ?: continue
+                if (!caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) continue
+                val lp = cm.getLinkProperties(net) ?: continue
+                val iface = lp.interfaceName ?: continue
+                return iface
+            }
+            null
+        } catch (_: Exception) { null }
     }
 
     private fun getNetworkTypeName(type: Int): String? = when (type) {

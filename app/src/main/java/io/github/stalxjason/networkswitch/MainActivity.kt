@@ -3,8 +3,12 @@ package io.github.stalxjason.networkswitch
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.Settings
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -125,7 +129,7 @@ class MainActivity : AppCompatActivity() {
         val signalInfo = NetworkInfoHelper.getSignalInfo(this@MainActivity)
         withContext(Dispatchers.Main) {
             updateSignalBars(signalInfo.signalLevel)
-            binding.tvCarrier.text = buildCarrierText(signalInfo)
+            updateCarrierView(signalInfo)
             binding.tvSignalDetail.text = buildSignalDetailText(signalInfo)
         }
 
@@ -171,17 +175,87 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * 运营商文本（双卡）
-     * 例：SIM1 移动 · LTE ★  |  SIM2 联通 · 5G NR
+     * 运营商区域动态渲染（每张 SIM 一行）
+     * SIM1  中国电信  LTE  ★（数据卡）
+     * SIM2  中国移动  LTE
      */
-    private fun buildCarrierText(info: NetworkInfoHelper.SignalInfo): String {
-        if (info.sims.isEmpty()) return "未知运营商"
-        return info.sims.joinToString("  |  ") { sim ->
-            val slot = "SIM${sim.slotIndex + 1}"
-            val carrier = sim.carrierName ?: "未知"
-            val netType = sim.networkTypeName?.let { " · $it" } ?: ""
-            val mark = if (sim.isDataSim) " ★" else ""
-            "$slot $carrier$netType$mark"
+    private fun updateCarrierView(info: NetworkInfoHelper.SignalInfo) {
+        val container = binding.llCarrierContainer
+        container.removeAllViews()
+        if (info.sims.isEmpty()) {
+            val tv = TextView(this).apply {
+                text = "未知运营商"
+                textSize = 14f
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+            }
+            container.addView(tv)
+            return
+        }
+        info.sims.sortedBy { it.slotIndex }.forEach { sim ->
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = 4 }
+            }
+
+            // SIM 标签（如 SIM1）
+            val tvSlot = TextView(this).apply {
+                text = "SIM${sim.slotIndex + 1}"
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+                val bg = ContextCompat.getColor(this@MainActivity,
+                    if (sim.isDataSim) R.color.primary else R.color.text_hint)
+                setBackgroundColor(bg)
+                setTextColor(0xFFFFFFFF.toInt())
+                setPadding(10, 3, 10, 3)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { marginEnd = 10 }
+            }
+            row.addView(tvSlot)
+
+            // 运营商名称
+            val tvCarrier = TextView(this).apply {
+                text = sim.carrierName ?: "未知"
+                textSize = 14f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { marginEnd = 8 }
+            }
+            row.addView(tvCarrier)
+
+            // 网络类型（如 LTE、5G NR）
+            sim.networkTypeName?.let { netType ->
+                val tvNet = TextView(this).apply {
+                    text = netType
+                    textSize = 12f
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { marginEnd = 6 }
+                }
+                row.addView(tvNet)
+            }
+
+            // 数据卡标记
+            if (sim.isDataSim) {
+                val tvMark = TextView(this).apply {
+                    text = "★"
+                    textSize = 12f
+                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.primary))
+                }
+                row.addView(tvMark)
+            }
+
+            container.addView(row)
         }
     }
 
@@ -242,19 +316,25 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * 接口标签：
-     * - 有 simLabel（rmnet 类）：SIM1 移动 ★  (rmnet_data0)
-     * - 无 simLabel：wlan0 / eth0 等直接显示
+     * - 移动网络接口（rmnet 类）：
+     *     若接口名与 activeIfaceName 完全匹配 → 显示运营商 + ★
+     *     否则 → 仅显示"移动网络"
+     * - 非移动接口：直接显示接口名
      */
     private fun buildIfaceLabel(
         iface: IpHelper.InterfaceIp,
         signalInfo: NetworkInfoHelper.SignalInfo
     ): String {
-        val simLabel = iface.simLabel ?: return iface.ifaceName
-        val slotIndex = simLabel.removePrefix("SIM").toIntOrNull()?.minus(1) ?: -1
-        val simInfo = signalInfo.sims.find { it.slotIndex == slotIndex }
-        val carrierPart = simInfo?.carrierName?.let { " $it" } ?: ""
-        val dataMark = if (simInfo?.isDataSim == true) " ★" else ""
-        return "$simLabel$carrierPart$dataMark  (${iface.ifaceName})"
+        if (!iface.isMobile) return iface.ifaceName
+        return if (iface.ifaceName == signalInfo.activeIfaceName) {
+            // 当前数据卡接口：找到对应运营商
+            val dataSim = signalInfo.sims.find { it.isDataSim }
+            val carrier = dataSim?.carrierName?.let { " $it" } ?: ""
+            val slotLabel = dataSim?.let { " SIM${it.slotIndex + 1}" } ?: ""
+            "移动网络$slotLabel$carrier ★  (${iface.ifaceName})"
+        } else {
+            "移动网络  (${iface.ifaceName})"
+        }
     }
 
     private fun createIpTextView(text: String): TextView {
