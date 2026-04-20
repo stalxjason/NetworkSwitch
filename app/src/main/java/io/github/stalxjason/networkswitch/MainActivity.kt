@@ -6,9 +6,7 @@ import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.Settings
-import android.text.SpannableString
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
+import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -31,7 +29,6 @@ class MainActivity : AppCompatActivity() {
     private val requestPhonePermission = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { _ ->
-        // 无论授权与否都刷新，拒绝时降级显示
         lifecycleScope.launch { refreshStatus() }
     }
 
@@ -50,14 +47,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         setupUI()
 
-        // 请求电话权限后刷新；已有权限直接刷新
         val permsNeeded = arrayOf(
             Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.READ_BASIC_PHONE_STATE
@@ -128,9 +123,7 @@ class MainActivity : AppCompatActivity() {
         // 信号与运营商（双卡）
         val signalInfo = NetworkInfoHelper.getSignalInfo(this@MainActivity)
         withContext(Dispatchers.Main) {
-            updateSignalBars(signalInfo.signalLevel)
-            updateCarrierView(signalInfo)
-            binding.tvSignalDetail.text = buildSignalDetailText(signalInfo)
+            updateSignalView(signalInfo)
         }
 
         // IP 列表
@@ -165,112 +158,138 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateSignalBars(level: Int) {
-        val activeColor = ContextCompat.getColor(this, R.color.primary)
-        val inactiveColor = ContextCompat.getColor(this, R.color.text_hint)
-        val bars = listOf(binding.signalBar1, binding.signalBar2, binding.signalBar3, binding.signalBar4)
-        bars.forEachIndexed { index, bar ->
-            bar.setBackgroundColor(if (index < level) activeColor else inactiveColor)
-        }
-    }
-
-    /**
-     * 运营商区域动态渲染（每张 SIM 一行）
-     * SIM1  中国电信  LTE  ★（数据卡）
-     * SIM2  中国移动  LTE
-     */
-    private fun updateCarrierView(info: NetworkInfoHelper.SignalInfo) {
-        val container = binding.llCarrierContainer
+    // ─────────────────────────────────────────────────────────────────────────
+    // 信号区域：每张 SIM 一行
+    //   [▎▎▎▎]  SIM1  中国电信  LTE  ★  -89 dBm
+    //   [▎▎░░]  SIM2  中国移动  LTE     -102 dBm
+    // ─────────────────────────────────────────────────────────────────────────
+    private fun updateSignalView(info: NetworkInfoHelper.SignalInfo) {
+        val container = binding.llSignalContainer
         container.removeAllViews()
+
         if (info.sims.isEmpty()) {
             val tv = TextView(this).apply {
-                text = "未知运营商"
+                text = "无 SIM 卡"
                 textSize = 14f
-                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
             }
             container.addView(tv)
             return
         }
-        info.sims.sortedBy { it.slotIndex }.forEach { sim ->
+
+        val primaryColor   = ContextCompat.getColor(this, R.color.primary)
+        val hintColor      = ContextCompat.getColor(this, R.color.text_hint)
+        val textPrimary    = ContextCompat.getColor(this, R.color.text_primary)
+        val textSecondary  = ContextCompat.getColor(this, R.color.text_secondary)
+
+        info.sims.sortedBy { it.slotIndex }.forEachIndexed { idx, sim ->
+            // 行容器
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { bottomMargin = 4 }
+                ).apply {
+                    if (idx > 0) topMargin = dpToPx(8)
+                }
             }
 
-            // SIM 标签（如 SIM1）
-            val tvSlot = TextView(this).apply {
-                text = "SIM${sim.slotIndex + 1}"
-                textSize = 11f
-                typeface = Typeface.DEFAULT_BOLD
-                val bg = ContextCompat.getColor(this@MainActivity,
-                    if (sim.isDataSim) R.color.primary else R.color.text_hint)
-                setBackgroundColor(bg)
-                setTextColor(0xFFFFFFFF.toInt())
-                setPadding(10, 3, 10, 3)
+            // 信号格（4格，阶梯高度）
+            val barsLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.BOTTOM
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { marginEnd = 10 }
+                ).apply { marginEnd = dpToPx(10) }
+            }
+            val barHeights = intArrayOf(6, 10, 15, 20) // dp
+            for (i in 0..3) {
+                val bar = View(this).apply {
+                    val active = i < sim.signalLevel
+                    setBackgroundColor(if (active) primaryColor else hintColor)
+                    layoutParams = LinearLayout.LayoutParams(
+                        dpToPx(5), dpToPx(barHeights[i])
+                    ).apply { if (i > 0) marginStart = dpToPx(2) }
+                }
+                barsLayout.addView(bar)
+            }
+            row.addView(barsLayout)
+
+            // SIM 标签
+            val tvSlot = TextView(this).apply {
+                text = "SIM${sim.slotIndex + 1}"
+                textSize = 10f
+                typeface = Typeface.DEFAULT_BOLD
+                setBackgroundColor(if (sim.isDataSim) primaryColor else hintColor)
+                setTextColor(0xFFFFFFFF.toInt())
+                setPadding(dpToPx(6), dpToPx(2), dpToPx(6), dpToPx(2))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { marginEnd = dpToPx(8) }
             }
             row.addView(tvSlot)
 
-            // 运营商名称
+            // 运营商名
             val tvCarrier = TextView(this).apply {
                 text = sim.carrierName ?: "未知"
                 textSize = 14f
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+                setTextColor(textPrimary)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { marginEnd = 8 }
+                ).apply { marginEnd = dpToPx(6) }
             }
             row.addView(tvCarrier)
 
-            // 网络类型（如 LTE、5G NR）
+            // 网络类型
             sim.networkTypeName?.let { netType ->
                 val tvNet = TextView(this).apply {
                     text = netType
                     textSize = 12f
-                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
+                    setTextColor(textSecondary)
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply { marginEnd = 6 }
+                    ).apply { marginEnd = dpToPx(4) }
                 }
                 row.addView(tvNet)
             }
 
-            // 数据卡标记
+            // 数据卡标记 ★
             if (sim.isDataSim) {
                 val tvMark = TextView(this).apply {
                     text = "★"
-                    textSize = 12f
-                    setTextColor(ContextCompat.getColor(this@MainActivity, R.color.primary))
+                    textSize = 11f
+                    setTextColor(primaryColor)
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply { marginEnd = dpToPx(6) }
                 }
                 row.addView(tvMark)
+            }
+
+            // dBm
+            sim.signalDbm?.let { dbm ->
+                val tvDbm = TextView(this).apply {
+                    text = "$dbm dBm"
+                    textSize = 11f
+                    setTextColor(textSecondary)
+                }
+                row.addView(tvDbm)
             }
 
             container.addView(row)
         }
     }
 
-    private fun buildSignalDetailText(info: NetworkInfoHelper.SignalInfo): String {
-        val parts = mutableListOf<String>()
-        info.signalStrengthDbm?.let { parts.add("${it} dBm") }
-        if (info.signalLevel > 0) parts.add("${info.signalLevel}/4 格")
-        return parts.ifEmpty { listOf("无信号") }.joinToString("  |  ")
-    }
-
-    /**
-     * 动态生成 IP 列表
-     * 移动网络接口显示：SIM1 移动 ★ (rmnet_data0)
-     * 普通接口直接显示接口名
-     */
+    // ─────────────────────────────────────────────────────────────────────────
+    // IP 列表
+    // ─────────────────────────────────────────────────────────────────────────
     private fun updateIpList(
         ipList: List<IpHelper.InterfaceIp>,
         signalInfo: NetworkInfoHelper.SignalInfo
@@ -306,7 +325,7 @@ class MainActivity : AppCompatActivity() {
                 val divider = View(this).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT, 1
-                    ).apply { setMargins(0, 12, 0, 12) }
+                    ).apply { setMargins(0, dpToPx(10), 0, dpToPx(10)) }
                     setBackgroundColor(0x22FFFFFF.toInt())
                 }
                 container.addView(divider)
@@ -314,20 +333,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 接口标签：
-     * - 移动网络接口（rmnet 类）：
-     *     若接口名与 activeIfaceName 完全匹配 → 显示运营商 + ★
-     *     否则 → 仅显示"移动网络"
-     * - 非移动接口：直接显示接口名
-     */
     private fun buildIfaceLabel(
         iface: IpHelper.InterfaceIp,
         signalInfo: NetworkInfoHelper.SignalInfo
     ): String {
         if (!iface.isMobile) return iface.ifaceName
         return if (iface.ifaceName == signalInfo.activeIfaceName) {
-            // 当前数据卡接口：找到对应运营商
             val dataSim = signalInfo.sims.find { it.isDataSim }
             val carrier = dataSim?.carrierName?.let { " $it" } ?: ""
             val slotLabel = dataSim?.let { " SIM${it.slotIndex + 1}" } ?: ""
@@ -345,10 +356,7 @@ class MainActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                topMargin = 4
-                bottomMargin = 4
-            }
+            ).apply { topMargin = dpToPx(3); bottomMargin = dpToPx(3) }
         }
     }
 
@@ -375,4 +383,7 @@ class MainActivity : AppCompatActivity() {
             NetworkWidgetProvider.updateWidget(this@MainActivity)
         }
     }
+
+    private fun dpToPx(dp: Int): Int =
+        (dp * resources.displayMetrics.density + 0.5f).toInt()
 }

@@ -107,72 +107,13 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- 信号与运营商 -->
+                <!-- 信号区域：动态渲染，每张 SIM 一行（信号格 + 运营商 + 网络类型 + dBm） -->
                 <LinearLayout
+                    android:id="@+id/ll_signal_container"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="16dp">
-
-                    <!-- 信号格数 -->
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginEnd="12dp"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical">
-
-                        <View
-                            android:id="@+id/signal_bar_1"
-                            android:layout_width="6dp"
-                            android:layout_height="8dp"
-                            android:layout_marginEnd="3dp"
-                            android:background="@color/text_hint" />
-
-                        <View
-                            android:id="@+id/signal_bar_2"
-                            android:layout_width="6dp"
-                            android:layout_height="14dp"
-                            android:layout_marginEnd="3dp"
-                            android:background="@color/text_hint" />
-
-                        <View
-                            android:id="@+id/signal_bar_3"
-                            android:layout_width="6dp"
-                            android:layout_height="20dp"
-                            android:layout_marginEnd="3dp"
-                            android:background="@color/text_hint" />
-
-                        <View
-                            android:id="@+id/signal_bar_4"
-                            android:layout_width="6dp"
-                            android:layout_height="26dp"
-                            android:background="@color/text_hint" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <!-- 运营商：动态填充，每张 SIM 一行 -->
-                        <LinearLayout
-                            android:id="@+id/ll_carrier_container"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="vertical" />
-
-                        <TextView
-                            android:id="@+id/tv_signal_detail"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="--"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-                </LinearLayout>
+                    android:orientation="vertical"
+                    android:layout_marginBottom="16dp" />
 
                 <!-- 分隔 -->
                 <View
