@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 节点连接线 - 六边形网络 -->
+    <path
+        android:strokeColor="#3a7bd5"
+        android:strokeWidth="0.6"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M54,55 L54,30 M54,55 L54,80 M54,55 L79,42 M54,55 L29,42 M54,55 L79,68 M54,55 L29,68" />
+    <!-- 外围六边形连线 -->
+    <path
+        android:strokeColor="#3a7bd5"
+        android:strokeWidth="0.5"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M54,30 L79,42 L79,68 L54,80 L29,68 L29,42 Z"
+        android:alpha="0.6" />
+
+    <!-- 中心节点光晕 -->
+    <path
+        android:fillColor="#00d2ff"
+        android:pathData="M54,55 m-6,0 a6,6 0,1,0 12,0 a6,6 0,1,0 -12,0"
+        android:alpha="0.25" />
+    <path
+        android:fillColor="#00d2ff"
+        android:pathData="M54,55 m-4,0 a4,4 0,1,0 8,0 a4,4 0,1,0 -8,0"
+        android:alpha="0.5" />
+    <path
+        android:fillColor="#00d2ff"
+        android:pathData="M54,55 m-2.5,0 a2.5,2.5 0,1,0 5,0 a2.5,2.5 0,1,0 -5,0" />
+
+    <!-- 外围节点 -->
+    <path android:fillColor="#4facfe" android:pathData="M54,30 m-2.5,0 a2.5,2.5 0,1,0 5,0 a2.5,2.5 0,1,0 -5,0" />
+    <path android:fillColor="#4facfe" android:pathData="M54,80 m-2.5,0 a2.5,2.5 0,1,0 5,0 a2.5,2.5 0,1,0 -5,0" />
+    <path android:fillColor="#4facfe" android:pathData="M79,42 m-2.5,0 a2.5,2.5 0,1,0 5,0 a2.5,2.5 0,1,0 -5,0" />
+    <path android:fillColor="#4facfe" android:pathData="M79,68 m-2.5,0 a2.5,2.5 0,1,0 5,0 a2.5,2.5 0,1,0 -5,0" />
+    <path android:fillColor="#4facfe" android:pathData="M29,42 m-2.5,0 a2.5,2.5 0,1,0 5,0 a2.5,2.5 0,1,0 -5,0" />
+    <path android:fillColor="#4facfe" android:pathData="M29,68 m-2.5,0 a2.5,2.5 0,1,0 5,0 a2.5,2.5 0,1,0 -5,0" />
+
+    <!-- 信号弧线 - 左上角 -->
+    <path
+        android:strokeColor="#00d2ff"
+        android:strokeWidth="1"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M17,38 Q17,21 34,21" />
+    <path
+        android:strokeColor="#00d2ff"
+        android:strokeWidth="0.8"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M13,42 Q13,19 36,19"
+        android:alpha="0.7" />
+    <path
+        android:strokeColor="#00d2ff"
+        android:strokeWidth="0.6"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M9,46 Q9,16 39,16"
+        android:alpha="0.4" />
+
+    <!-- 扳手图标 - 右下角 -->
+    <path
+        android:fillColor="#cbd5e1"
+        android:pathData="M72,75 L82,75 L82,78 L72,78 Z" />
+    <path
+        android:fillColor="#cbd5e1"
+        android:pathData="M70,70 L76,70 L77,73 L69,73 Z" />
+    <path
+        android:fillColor="#cbd5e1"
+        android:pathData="M69,73 L77,73 L77,75 L69,75 Z" />
+    <path
+        android:fillColor="#1e3c72"
+        android:pathData="M71.5,74 L74.5,74 L74.5,75 L71.5,75 Z" />
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#94a3b8"
+        android:strokeWidth="0.6"
+        android:pathData="M80,76.5 m-1.2,0 a1.2,1.2 0,1,0 2.4,0 a1.2,1.2 0,1,0 -2.4,0" />
+
+    <!-- 底部波形 -->
+    <path
+        android:strokeColor="#4facfe"
+        android:strokeWidth="0.6"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M74,24 Q78,20 82,24 Q86,28 90,24 Q94,20 98,24 Q102,28 106,24"
+        android:alpha="0.5" />
+    <path
+        android:strokeColor="#4facfe"
+        android:strokeWidth="0.4"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M76,28 Q80,25 84,28 Q88,31 92,28 Q96,25 100,28"
+        android:alpha="0.35" />
+
+    <!-- 速度表盘 - 底部 -->
+    <path
+        android:strokeColor="#3a7bd5"
+        android:strokeWidth="0.5"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M22,82 Q38,68 52,82"
+        android:alpha="0.4" />
+    <path
+        android:strokeColor="#00d2ff"
+        android:strokeWidth="0.6"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M26,82 Q38,71 48,82"
+        android:alpha="0.6" />
+    <path
+        android:strokeColor="#00d2ff"
+        android:strokeWidth="0.5"
+        android:fillColor="@android:color/transparent"
+        android:pathData="M37,82 L37,77"
+        android:alpha="0.7" />
+    <path
+        android:fillColor="#00d2ff"
+        android:pathData="M37,82 m-1,0 a1,1 0,1,0 2,0 a1,1 0,1,0 -2,0" />
+
+</vector>

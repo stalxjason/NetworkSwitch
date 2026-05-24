@@ -1,0 +1,3 @@
+-keep class com.network.toolbox.** { *; }
+-keep class rikka.shizuku.** { *; }
+-dontwarn rikka.shizuku.**

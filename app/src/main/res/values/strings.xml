@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">网络工具箱</string>
+    <string name="widget_description">查看和切换网络模式</string>
+</resources>
