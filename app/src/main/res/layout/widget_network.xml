@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
-    android:padding="14dp">
+    android:padding="10dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -27,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:text="LTE"
                 android:textColor="#FFFFFF"
-                android:textSize="28sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <!-- 运营商 + 网络描述 -->
@@ -35,33 +35,33 @@
                 android:id="@+id/tv_widget_carrier"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="1dp"
                 android:text="中国电信"
                 android:textColor="#80FFFFFF"
-                android:textSize="12sp" />
+                android:textSize="10sp" />
 
             <!-- 信号信息（格数 / dBm） -->
             <TextView
                 android:id="@+id/tv_widget_signal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="1dp"
                 android:text="3/4 格  -89 dBm"
                 android:textColor="#66FFFFFF"
-                android:textSize="11sp" />
+                android:textSize="9sp" />
 
         </LinearLayout>
 
         <!-- 右侧切换按钮 -->
         <FrameLayout
             android:id="@+id/btn_widget_toggle"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_gravity="center_vertical">
 
             <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:src="@drawable/widget_btn_bg"
                 android:contentDescription="切换" />
 
@@ -72,7 +72,7 @@
                 android:gravity="center"
                 android:text="4G/5G"
                 android:textColor="#FFFFFF"
-                android:textSize="10sp"
+                android:textSize="9sp"
                 android:textStyle="bold" />
 
         </FrameLayout>
