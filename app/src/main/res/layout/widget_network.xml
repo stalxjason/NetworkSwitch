@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
-    android:padding="10dp">
+    android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -35,7 +35,7 @@
                 android:id="@+id/tv_widget_carrier"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
+                android:layout_marginTop="0dp"
                 android:text="中国电信"
                 android:textColor="#80FFFFFF"
                 android:textSize="10sp" />
@@ -45,7 +45,7 @@
                 android:id="@+id/tv_widget_signal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
+                android:layout_marginTop="0dp"
                 android:text="3/4 格  -89 dBm"
                 android:textColor="#66FFFFFF"
                 android:textSize="9sp" />
@@ -57,7 +57,8 @@
             android:id="@+id/btn_widget_toggle"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_gravity="center_vertical">
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="4dp">
 
             <ImageView
                 android:layout_width="40dp"
