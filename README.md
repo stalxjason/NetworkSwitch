@@ -5,18 +5,20 @@
 ## 功能特性
 
 - 一键切换 4G LTE / 5G NR 网络模式
-- 桌面小组件（3x1），点击即切换
+- 桌面小组件（2x1），点击即切换，显示运营商和信号强度
 - 内网 IP 自动显示，外网 IP 点击查询
 - Shizuku / Root 双通道，自动降级
 - 深色主题，Material Design 3 风格
 
 ## 桌面小组件
 
-| 4G | 切换按钮 | 5G |
-|:--:|:--------:|:--:|
+| 模式 | 运营商 | 信号 | 切换按钮 |
+|:---:|:------:|:----:|:--------:|
 
-- 当前模式高亮，非当前模式灰显
-- 点击任意位置即可切换，无需打开 App
+- 2x1 尺寸，适配 5x9 桌面网格
+- 左侧显示当前网络模式（4G LTE / 5G NR）、运营商、信号格数
+- 右侧圆形按钮一键切换，无需打开 App
+- 点击小组件空白区域可打开主界面
 
 ## 主界面
 
@@ -64,9 +66,18 @@ app/src/main/java/io/github/stalxjason/networkswitch/
 ├── MainActivity.kt          # 主界面
 ├── NetworkMode.kt           # 网络模式枚举（4G / 5G）
 ├── NetworkModeHelper.kt     # 核心切换逻辑（Shizuku → Root → 设置）
+├── NetworkInfoHelper.kt     # 信号强度、运营商、网络类型信息
 ├── ShizukuHelper.kt         # Shizuku 授权与命令执行
 ├── IpHelper.kt              # 内网/外网 IP 获取
-└── NetworkWidgetProvider.kt # 桌面小组件
+└── NetworkWidgetProvider.kt # 桌面小组件（2x1）
+
+app/src/main/res/
+├── layout/widget_network.xml          # 小组件布局
+├── xml/network_widget_info.xml        # 小组件尺寸配置
+├── drawable/widget_background.xml     # 小组件背景
+├── drawable/widget_btn_bg.xml         # 切换按钮背景
+├── drawable/ic_toggle_switch.xml      # 切换图标
+└── drawable/ic_toggle_switch_5g.xml   # 5G 切换图标
 ```
 
 ## 编译
