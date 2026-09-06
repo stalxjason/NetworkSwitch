@@ -5,8 +5,6 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.lang.reflect.Method
 import java.util.concurrent.TimeUnit
 
@@ -74,10 +72,23 @@ object ShizukuHelper {
     fun isOurPermissionRequest(requestCode: Int): Boolean =
         requestCode == SHIZUKU_PERMISSION_REQUEST_CODE
 
+    // 读取进程输出的常驻线程池（守护线程，避免挂起命令卡死 IO 调度器）
+    private val outputPool = java.util.concurrent.Executors.newCachedThreadPool { r ->
+        Thread(r).apply { isDaemon = true }
+    }
+
     /**
      * 通过反射调用 Shizuku.newProcess 执行 shell 命令
+     *
+     * 注意：Shizuku 返回的远程 Process 与标准实现不一致——
+     * waitFor(timeout) 可能不生效、未退出时 exitValue() 会抛
+     * "process hasn't exited"。因此以「输出流 EOF」为完成信号，
+     * 超时作用在 future.get 上；流结束后再取退出码。
      */
-    suspend fun exec(command: String): ShellResult = withContext(Dispatchers.IO) {
+    suspend fun exec(
+        command: String,
+        timeoutSeconds: Long = EXEC_TIMEOUT_SECONDS
+    ): ShellResult = withContext(Dispatchers.IO) {
         try {
             if (!isAvailable()) {
                 return@withContext ShellResult(false, "", "Shizuku 未运行或未授权")
@@ -89,16 +100,38 @@ object ShizukuHelper {
 
             val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
 
-            val stdout = BufferedReader(InputStreamReader(process.inputStream)).readText()
-            val stderr = BufferedReader(InputStreamReader(process.errorStream)).readText()
-            val finished = process.waitFor(EXEC_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            if (!finished) {
-                process.destroyForcibly()
-                Log.w(TAG, "Shizuku exec timed out after ${EXEC_TIMEOUT_SECONDS}s: $command")
-                return@withContext ShellResult(false, stdout.trim(), "命令执行超时")
+            val stdoutFuture = outputPool.submit<String> {
+                process.inputStream.bufferedReader().readText()
+            }
+            val stderrFuture = outputPool.submit<String> {
+                process.errorStream.bufferedReader().readText()
             }
 
-            ShellResult(process.exitValue() == 0, stdout.trim(), stderr.trim())
+            val stdout: String
+            val stderr: String
+            try {
+                stdout = stdoutFuture.get(timeoutSeconds, TimeUnit.SECONDS)
+                stderr = stderrFuture.get(3, TimeUnit.SECONDS)
+            } catch (e: Exception) {
+                process.destroyForcibly()
+                Log.w(TAG, "Shizuku exec timed out after ${timeoutSeconds}s: $command")
+                return@withContext ShellResult(false, "", "命令执行超时")
+            }
+
+            // 流已 EOF → 远程命令已执行完，此时取退出码
+            val exitCode: Int? = try {
+                process.exitValue()
+            } catch (_: Throwable) {
+                try {
+                    process.waitFor(3, TimeUnit.SECONDS)
+                    process.exitValue()
+                } catch (_: Throwable) {
+                    null
+                }
+            }
+
+            // 拿不到退出码时按成功处理：命令确已执行，由上层校验兜底
+            ShellResult(exitCode == null || exitCode == 0, stdout.trim(), stderr.trim())
         } catch (e: Exception) {
             Log.e(TAG, "Failed to exec via Shizuku: $command", e)
             ShellResult(false, "", e.message ?: "Unknown error")

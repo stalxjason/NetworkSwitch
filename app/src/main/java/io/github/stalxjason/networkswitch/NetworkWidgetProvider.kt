@@ -57,7 +57,7 @@ class NetworkWidgetProvider : AppWidgetProvider() {
         scope.launch {
             val result = NetworkModeHelper.toggleNetworkMode(context)
             val msg = if (result.success) {
-                "已切换到 ${result.currentMode.label}"
+                "已切换到 ${result.mode.label}"
             } else {
                 result.message
             }

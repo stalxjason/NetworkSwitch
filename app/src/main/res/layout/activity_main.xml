@@ -42,7 +42,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="24dp"
-            app:cardBackgroundColor="@color/primary"
+            app:cardBackgroundColor="?attr/colorPrimary"
             app:cardCornerRadius="20dp"
             app:cardElevation="0dp">
 
@@ -89,7 +89,7 @@
             android:layout_marginBottom="28dp"
             android:text="切换 4G/5G"
             android:textSize="18sp"
-            app:backgroundTint="@color/primary"
+            app:backgroundTint="?attr/colorPrimary"
             app:cornerRadius="16dp" />
 
         <!-- 网络信息卡片 -->
@@ -123,14 +123,29 @@
                     android:background="#22FFFFFF" />
 
                 <!-- IP 列表标题 -->
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="10dp"
-                    android:text="IP 地址"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="IP 地址"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="点按可复制"
+                        android:textColor="@color/text_hint"
+                        android:textSize="11sp" />
+                </LinearLayout>
 
                 <!-- IP 列表容器 -->
                 <LinearLayout
@@ -186,6 +201,120 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+        <!-- 外观设置卡片 -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="@color/card_bg"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="外观"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggle_theme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_theme_light"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="浅色"
+                        android:textColor="@color/toggle_btn_text"
+                        android:textSize="13sp"
+                        app:backgroundTint="@color/toggle_btn_bg"
+                        app:cornerRadius="12dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_theme_dark"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="深色"
+                        android:textColor="@color/toggle_btn_text"
+                        android:textSize="13sp"
+                        app:backgroundTint="@color/toggle_btn_bg"
+                        app:cornerRadius="12dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_theme_system"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="跟随系统"
+                        android:textColor="@color/toggle_btn_text"
+                        android:textSize="13sp"
+                        app:backgroundTint="@color/toggle_btn_bg"
+                        app:cornerRadius="12dp" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="主题色"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:id="@+id/accent_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:id="@+id/accent_blue"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:background="@drawable/bg_accent_blue" />
+
+                    <View
+                        android:id="@+id/accent_green"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginStart="16dp"
+                        android:background="@drawable/bg_accent_green" />
+
+                    <View
+                        android:id="@+id/accent_purple"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginStart="16dp"
+                        android:background="@drawable/bg_accent_purple" />
+
+                    <View
+                        android:id="@+id/accent_orange"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginStart="16dp"
+                        android:background="@drawable/bg_accent_orange" />
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_shizuku_auth"
             style="@style/Widget.Material3.Button.OutlinedButton"
@@ -193,6 +322,17 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:text="授权 Shizuku"
+            android:textColor="@color/text_primary"
+            app:cornerRadius="12dp"
+            app:strokeColor="@color/text_hint" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_wifi_password"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="查看已保存 WiFi 密码"
             android:textColor="@color/text_primary"
             app:cornerRadius="12dp"
             app:strokeColor="@color/text_hint" />

@@ -3,4 +3,5 @@
     <string name="app_name">网络切换</string>
     <string name="widget_name">网络切换</string>
     <string name="widget_description">显示当前网络模式，一键切换 4G/5G</string>
+    <string name="widget_description_resizable">内容同网络切换组件，尺寸可自由拉伸，文字随大小缩放</string>
 </resources>

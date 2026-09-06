@@ -9,14 +9,23 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_BASIC_PHONE_STATE" />
 
+    <!-- WiFi 状态权限（密码查看走 Shizuku 特权接口，此权限为声明性补充） -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
     <!-- Shizuku 权限 -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+
+    <!-- targetSdk 30+ 包可见性：允许检测并拉起 Shizuku 应用 -->
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
 
     <uses-feature
         android:name="android.hardware.telephony"
         android:required="true" />
 
     <application
+        android:name=".NetworkSwitchApplication"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
@@ -32,6 +41,11 @@
             </intent-filter>
         </activity>
 
+        <!-- 已保存 WiFi 密码查看 -->
+        <activity
+            android:name=".wifi.WifiListActivity"
+            android:exported="false" />
+
         <!-- 桌面 Widget -->
         <receiver
             android:name=".NetworkWidgetProvider"
@@ -42,6 +56,19 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/network_widget_info" />
+        </receiver>
+
+        <!-- 桌面 Widget（可自由调节尺寸，文字随大小缩放） -->
+        <receiver
+            android:name=".ResizableNetworkWidgetProvider"
+            android:exported="true"
+            android:label="网络切换-自由尺寸">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/network_widget_resizable_info" />
         </receiver>
 
         <!-- Shizuku Provider -->

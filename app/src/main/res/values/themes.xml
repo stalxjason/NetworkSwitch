@@ -1,12 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.NetworkSwitch" parent="Theme.Material3.Dark.NoActionBar">
+    <!-- 浅色：状态栏用深色前景图标（修复浅色下状态栏不可读） -->
+    <style name="Theme.NetworkSwitch" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="android:statusBarColor">@color/background</item>
         <item name="android:navigationBarColor">@color/background</item>
         <item name="android:windowBackground">@color/background</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- 备选主题色 overlay：setTheme 后 applyStyle 覆盖 colorPrimary -->
+    <style name="AccentOverlay.Blue" parent="">
+        <item name="colorPrimary">@color/accent_blue</item>
+    </style>
+
+    <style name="AccentOverlay.Green" parent="">
+        <item name="colorPrimary">@color/accent_green</item>
+    </style>
+
+    <style name="AccentOverlay.Purple" parent="">
+        <item name="colorPrimary">@color/accent_purple</item>
+    </style>
+
+    <style name="AccentOverlay.Orange" parent="">
+        <item name="colorPrimary">@color/accent_orange</item>
     </style>
 
 </resources>

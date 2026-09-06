@@ -6,26 +6,58 @@ import org.junit.Test
 class IpHelperTest {
 
     @Test
-    fun `getAllInterfaceIps returns non-null list`() {
-        val list = IpHelper.getAllInterfaceIps()
-        // 在 CI/JVM 环境中可能获取不到 IP，但不应该抛异常
-        assertNotNull(list)
-        assertTrue(list is List<*>)
+    fun `IpEntry mobile defaults`() {
+        val entry = IpHelper.IpEntry(
+            ifaceName = "rmnet_data3",
+            ipv4 = "10.0.0.1",
+            ipv6 = null,
+            kind = IpHelper.Kind.MOBILE
+        )
+        assertEquals("rmnet_data3", entry.ifaceName)
+        assertEquals("10.0.0.1", entry.ipv4)
+        assertNull(entry.ipv6)
+        assertEquals(IpHelper.Kind.MOBILE, entry.kind)
+        assertNull(entry.simSlotIndex)
+        assertNull(entry.simCarrier)
+        assertNull(entry.simSubscriptionId)
+        assertFalse(entry.isActiveData)
     }
 
     @Test
-    fun `InterfaceIp data class defaults`() {
-        val ip = IpHelper.InterfaceIp("wlan0", null, null)
-        assertEquals("wlan0", ip.ifaceName)
-        assertNull(ip.ipv4)
-        assertNull(ip.ipv6)
+    fun `IpEntry with sim attribution`() {
+        val entry = IpHelper.IpEntry(
+            ifaceName = "rmnet_data3",
+            ipv4 = "10.144.179.230",
+            ipv6 = "240e::1",
+            kind = IpHelper.Kind.MOBILE,
+            simSlotIndex = 0,
+            simCarrier = "中国电信",
+            simSubscriptionId = 5,
+            isActiveData = true
+        )
+        assertEquals(0, entry.simSlotIndex)
+        assertEquals("中国电信", entry.simCarrier)
+        assertEquals(5, entry.simSubscriptionId)
+        assertTrue(entry.isActiveData)
     }
 
     @Test
-    fun `InterfaceIp data class with values`() {
-        val ip = IpHelper.InterfaceIp("rmnet0", "10.0.0.1", "2408::1")
-        assertEquals("rmnet0", ip.ifaceName)
-        assertEquals("10.0.0.1", ip.ipv4)
-        assertEquals("2408::1", ip.ipv6)
+    fun `IpEntry wifi is not mobile`() {
+        val entry = IpHelper.IpEntry(
+            ifaceName = "wlan0",
+            ipv4 = "192.168.1.2",
+            ipv6 = null,
+            kind = IpHelper.Kind.WIFI
+        )
+        assertNotEquals(IpHelper.Kind.MOBILE, entry.kind)
+        assertEquals(IpHelper.Kind.WIFI, entry.kind)
+    }
+
+    @Test
+    fun `Kind covers all expected transports`() {
+        assertEquals(
+            listOf("MOBILE", "WIFI", "ETHERNET", "VPN"),
+            IpHelper.Kind.entries.map { it.name }
+        )
     }
 }

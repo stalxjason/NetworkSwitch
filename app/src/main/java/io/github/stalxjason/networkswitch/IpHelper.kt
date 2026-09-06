@@ -1,5 +1,12 @@
 package io.github.stalxjason.networkswitch
 
+import android.annotation.SuppressLint
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.TelephonyNetworkSpecifier
+import android.telephony.SubscriptionManager
+import android.telephony.TelephonyManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -7,69 +14,137 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.Inet4Address
 import java.net.Inet6Address
-import java.net.NetworkInterface
 import java.net.URL
 
 /**
- * 获取本机网络接口 IP 列表
+ * 获取本机网络的 IP 信息
+ *
+ * 通过 ConnectivityManager 的网络列表（而非原始网卡枚举）取数据，
+ * 蜂窝网络用 NetworkCapabilities.networkSpecifier 里的 subscriptionId
+ * 精确归属到 SIM 卡；每张 SIM 只保留一条（数据卡 ★ 的网络优先），
+ * WLAN / 以太网 / VPN 单独展示。
  */
 object IpHelper {
 
-    data class InterfaceIp(
-        val ifaceName: String,   // 接口名，如 rmnet0、wlan0
+    enum class Kind { MOBILE, WIFI, ETHERNET, VPN }
+
+    data class IpEntry(
+        val ifaceName: String,
         val ipv4: String?,
         val ipv6: String?,
-        val isMobile: Boolean    // 是否是移动网络接口（rmnet/ccmni/pdp/wwan 等）
+        val kind: Kind,
+        val simSlotIndex: Int? = null,        // 0-based，null 表示无法归属
+        val simCarrier: String? = null,
+        val simSubscriptionId: Int? = null,
+        val isActiveData: Boolean = false     // 属于默认数据卡的网络
     )
 
-    /**
-     * 获取所有活跃网络接口的 IP 列表
-     * 排除 lo / docker / vbox 等虚拟接口
-     * 排除 link-local IPv6 (fe80::)
-     */
-    fun getAllInterfaceIps(): List<InterfaceIp> {
-        val result = mutableListOf<InterfaceIp>()
+    @SuppressLint("MissingPermission")
+    fun getAllIpEntries(context: Context): List<IpEntry> {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return emptyList()
 
+        // subscriptionId → (slotIndex, carrierName)
+        val subMap = mutableMapOf<Int, Pair<Int, String?>>()
         try {
-            val interfaces = NetworkInterface.getNetworkInterfaces()
-            for (iface in interfaces) {
-                if (iface.isLoopback || !iface.isUp) continue
-                val name = iface.name.lowercase()
-                if (name.startsWith("docker") || name.startsWith("vbox") ||
-                    name.startsWith("virbr") || name.startsWith("br-") ||
-                    name.startsWith("tun") || name.startsWith("tap")) continue
-
-                var ipv4: String? = null
-                var ipv6: String? = null
-
-                for (addr in iface.inetAddresses) {
-                    if (addr.isLoopbackAddress) continue
-                    when {
-                        addr is Inet4Address && ipv4 == null -> {
-                            ipv4 = addr.hostAddress
-                        }
-                        addr is Inet6Address && ipv6 == null -> {
-                            val raw = addr.hostAddress ?: continue
-                            if (raw.startsWith("fe80")) continue
-                            ipv6 = raw
-                        }
-                    }
-                }
-
-                if (ipv4 != null || ipv6 != null) {
-                    val mobile = isMobileIface(name)
-                    result.add(InterfaceIp(iface.name, ipv4, ipv6, mobile))
-                }
+            val subManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
+                    as? SubscriptionManager
+            val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            subManager?.activeSubscriptionInfoList?.forEach { sub ->
+                val carrier = try {
+                    tm?.createForSubscriptionId(sub.subscriptionId)
+                        ?.networkOperatorName?.takeIf { it.isNotBlank() }
+                } catch (_: Exception) { null }
+                    ?: sub.carrierName?.toString()?.takeIf { it.isNotBlank() }
+                subMap[sub.subscriptionId] = sub.simSlotIndex to carrier
             }
         } catch (_: Exception) {}
 
-        return result
-    }
+        val activeNet = try { cm.activeNetwork } catch (_: Exception) { null }
+        val defaultDataSubId = try {
+            SubscriptionManager.getDefaultDataSubscriptionId()
+        } catch (_: Exception) {
+            SubscriptionManager.INVALID_SUBSCRIPTION_ID
+        }
 
-    /** 判断是否是移动网络接口（不推断是哪张 SIM） */
-    private fun isMobileIface(name: String): Boolean {
-        val prefixes = listOf("rmnet", "ccmni", "pdp", "wwan")
-        return prefixes.any { name.startsWith(it) }
+        val mobileEntries = mutableListOf<IpEntry>()
+        val otherEntries = mutableListOf<IpEntry>()
+
+        for (net in runCatching { cm.allNetworks }.getOrNull() ?: emptyArray()) {
+            val caps = cm.getNetworkCapabilities(net) ?: continue
+            val lp = cm.getLinkProperties(net) ?: continue
+            val iface = lp.interfaceName ?: continue
+
+            val kind = when {
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) -> Kind.VPN
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> Kind.WIFI
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> Kind.ETHERNET
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> Kind.MOBILE
+                else -> continue
+            }
+
+            // 过滤 IMS 等无互联网能力的蜂窝网络
+            if (kind == Kind.MOBILE &&
+                !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            ) continue
+
+            var ipv4: String? = null
+            var ipv6: String? = null
+            for (la in lp.linkAddresses) {
+                val addr = la.address
+                when {
+                    addr is Inet4Address && ipv4 == null -> ipv4 = addr.hostAddress
+                    addr is Inet6Address && ipv6 == null -> {
+                        val raw = addr.hostAddress ?: continue
+                        if (raw.startsWith("fe80")) continue
+                        ipv6 = raw
+                    }
+                }
+            }
+            if (ipv4 == null && ipv6 == null) continue
+
+            // 每条承载的 IPv4 / IPv6 都保留，展示层按需拼装
+            var slot: Int? = null
+            var carrier: String? = null
+            var subId: Int? = null
+            if (kind == Kind.MOBILE) {
+                val specSubId = (caps.networkSpecifier as? TelephonyNetworkSpecifier)?.subscriptionId
+                if (specSubId != null && specSubId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+                    subId = specSubId
+                    subMap[specSubId]?.let { slot = it.first; carrier = it.second }
+                }
+            }
+
+            // ★ = 属于默认数据卡的网络（不能用 activeNetwork 判断：
+            // 开 VPN 时默认网络是 tun0，蜂窝网络会被误判为非活跃）
+            val isActiveData = if (subId != null && defaultDataSubId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+                subId == defaultDataSubId
+            } else {
+                net == activeNet && kind == Kind.MOBILE
+            }
+
+            val entry = IpEntry(
+                ifaceName = iface,
+                ipv4 = ipv4,
+                ipv6 = ipv6,
+                kind = kind,
+                simSlotIndex = slot,
+                simCarrier = carrier,
+                simSubscriptionId = subId,
+                isActiveData = isActiveData
+            )
+            if (kind == Kind.MOBILE) mobileEntries.add(entry) else otherEntries.add(entry)
+        }
+
+        // 去掉重复展示的兜底逻辑：每条承载单独展示
+        val kindOrder = mapOf(Kind.MOBILE to 0, Kind.WIFI to 1, Kind.ETHERNET to 2, Kind.VPN to 3)
+        return (mobileEntries + otherEntries).sortedWith(
+            compareBy(
+                { if (it.isActiveData) 0 else 1 },
+                { it.simSlotIndex ?: 9 },
+                { kindOrder[it.kind] ?: 9 }
+            )
+        )
     }
 
     /**

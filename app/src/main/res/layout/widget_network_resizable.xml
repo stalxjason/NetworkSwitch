@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <!-- 左侧信息区（文字大小由 Provider 按组件尺寸动态设置；拉宽后居中） -->
+        <LinearLayout
+            android:id="@+id/widget_info_column"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_widget_mode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="LTE"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_widget_carrier"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="中国电信"
+                android:textColor="#80FFFFFF"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/tv_widget_signal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="3/4 格  -89 dBm"
+                android:textColor="#66FFFFFF"
+                android:textSize="9sp" />
+
+            <!-- 以下仅竖向拉伸（高 ≥3 格）时显示，由 Provider 控制可见性与内容 -->
+            <TextView
+                android:id="@+id/tv_widget_sims"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="SIM1 中国电信 ★ LTE  -96 dBm"
+                android:textColor="#99FFFFFF"
+                android:textSize="10sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tv_widget_ips"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="SIM1 10.144.179.230"
+                android:textColor="#80FFFFFF"
+                android:textSize="9sp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <!-- 右侧切换按钮（尺寸由 Provider 按组件尺寸动态设置） -->
+        <FrameLayout
+            android:id="@+id/btn_widget_toggle"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="4dp">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:src="@drawable/widget_btn_bg"
+                android:contentDescription="切换" />
+
+            <TextView
+                android:id="@+id/tv_widget_btn_text"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:text="4G/5G"
+                android:textColor="#FFFFFF"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+
+        </FrameLayout>
+
+    </LinearLayout>
+
+</FrameLayout>
