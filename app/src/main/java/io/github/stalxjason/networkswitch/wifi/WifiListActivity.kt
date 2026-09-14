@@ -4,10 +4,12 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import io.github.stalxjason.networkswitch.AppTheme
+import io.github.stalxjason.networkswitch.R
 import io.github.stalxjason.networkswitch.ShizukuHelper
 import io.github.stalxjason.networkswitch.databinding.ActivityWifiListBinding
 import kotlinx.coroutines.launch
@@ -36,22 +38,24 @@ class WifiListActivity : AppCompatActivity(), Shizuku.OnRequestPermissionResultL
         binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = adapter
 
+        binding.btnBack.setOnClickListener { finish() }
+
         binding.btnAction.setOnClickListener {
-            when (ShizukuHelper.getStatus()) {
+            when (ShizukuHelper.getStatus(this)) {
                 is ShizukuHelper.Status.Running -> ShizukuHelper.requestPermission()
-                else -> openShizukuApp()
+                else -> launchShizukuApp()
             }
         }
 
         Shizuku.addRequestPermissionResultListener(this)
 
         // 打开即自动处理授权链路：运行中 → 弹授权；未运行 → 跳 Shizuku
-        when (ShizukuHelper.getStatus()) {
+        when (ShizukuHelper.getStatus(this)) {
             is ShizukuHelper.Status.Running -> ShizukuHelper.requestPermission()
             is ShizukuHelper.Status.NotRunning -> {
                 if (!autoJumpedToShizuku) {
                     autoJumpedToShizuku = true
-                    openShizukuApp()
+                    launchShizukuApp()
                 }
             }
             else -> {}
@@ -63,7 +67,7 @@ class WifiListActivity : AppCompatActivity(), Shizuku.OnRequestPermissionResultL
     override fun onResume() {
         super.onResume()
         // 从 Shizuku 授权页返回时自动重载
-        if (!loadedOnce && ShizukuHelper.isAvailable()) {
+        if (!loadedOnce && ShizukuHelper.isAvailable(this)) {
             loadNetworks()
         }
     }
@@ -78,7 +82,7 @@ class WifiListActivity : AppCompatActivity(), Shizuku.OnRequestPermissionResultL
         if (grantResult == PackageManager.PERMISSION_GRANTED) {
             loadNetworks()
         } else {
-            showStatus("Shizuku 授权被拒绝，无法读取密码", "重新授权")
+            showStatus(R.string.wifi_status_denied, R.string.wifi_action_regrant)
         }
     }
 
@@ -88,24 +92,30 @@ class WifiListActivity : AppCompatActivity(), Shizuku.OnRequestPermissionResultL
         binding.statusContainer.visibility = View.GONE
 
         lifecycleScope.launch {
-            when (val result = WifiPasswordProvider.getSavedNetworks()) {
+            when (val result = WifiPasswordProvider.getSavedNetworks(this@WifiListActivity)) {
                 is WifiPasswordProvider.Result.Ok -> {
                     loadedOnce = true
                     if (result.list.isEmpty()) {
-                        showStatus("本机没有已保存的 WiFi 网络", "重试")
+                        showStatus(R.string.wifi_status_empty, R.string.wifi_action_retry)
                     } else {
                         adapter.submit(result.list)
                         binding.recycler.visibility = View.VISIBLE
                     }
                 }
                 is WifiPasswordProvider.Result.ShizukuUnavailable ->
-                    showStatus(result.message, "去授权")
+                    showStatus(result.message, getString(R.string.wifi_action_grant))
                 is WifiPasswordProvider.Result.Error ->
-                    showStatus("读取失败：${result.message}", "重试")
+                    showStatus(
+                        getString(R.string.wifi_status_error, result.message),
+                        getString(R.string.wifi_action_retry)
+                    )
             }
             binding.progress.visibility = View.GONE
         }
     }
+
+    private fun showStatus(@StringRes messageRes: Int, @StringRes actionRes: Int) =
+        showStatus(getString(messageRes), getString(actionRes))
 
     private fun showStatus(message: String, actionText: String) {
         binding.statusContainer.visibility = View.VISIBLE
@@ -113,12 +123,10 @@ class WifiListActivity : AppCompatActivity(), Shizuku.OnRequestPermissionResultL
         binding.btnAction.text = actionText
     }
 
-    private fun openShizukuApp() {
-        val intent = packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
-        if (intent != null) {
-            startActivity(intent)
-        } else {
-            Toast.makeText(this, "未检测到 Shizuku，请先安装", Toast.LENGTH_LONG).show()
+    /** 拉起 Shizuku 应用；未安装或无法启动时提示安装 */
+    private fun launchShizukuApp() {
+        if (!ShizukuHelper.openShizukuApp(this)) {
+            Toast.makeText(this, R.string.toast_shizuku_install_first, Toast.LENGTH_LONG).show()
         }
     }
 }

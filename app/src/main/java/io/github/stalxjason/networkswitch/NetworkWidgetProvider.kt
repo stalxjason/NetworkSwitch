@@ -12,17 +12,32 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 网络切换桌面 Widget (4x2 澎湃OS3 深色风格)
  *
  * 左：当前网络模式 (LTE/5G NR) + 运营商 + 信号强度
  * 右：切换按钮
+ *
+ * 展示数据在子线程取（getCurrentMode / getSignalInfo 内部有跨进程 binder 调用），
+ * RemoteViews 回主线程拼装，避免桌面渲染时卡主线程。
  */
 class NetworkWidgetProvider : AppWidgetProvider() {
 
     companion object {
         const val ACTION_TOGGLE = "io.github.stalxjason.networkswitch.ACTION_TOGGLE"
+
+        // 切网令牌：widget receiver 必须 exported（PendingIntent 触发需要），
+        // android:exported=false 与包可见性都拦不住显式组件广播。
+        // 令牌挡住「随手发的显式广播」，但不是硬边界——读常量即可拿到。
+        internal const val EXTRA_TOGGLE_TOKEN = "extra_toggle_token"
+        internal const val TOGGLE_TOKEN = "networkswitch.toggle.v1"
+
+        /** 校验切网意图是否携带本应用 PendingIntent 写入的令牌 */
+        internal fun hasToggleToken(intent: Intent): Boolean =
+            intent.getStringExtra(EXTRA_TOGGLE_TOKEN) == TOGGLE_TOKEN
+
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
         fun updateWidget(context: Context) {
@@ -36,6 +51,13 @@ class NetworkWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    /** Widget 文案快照：所有 IO 查询结果，主线程只做赋值 */
+    private data class WidgetTexts(
+        val modeLabel: String,
+        val carrierText: String,
+        val signalText: String
+    )
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -48,7 +70,7 @@ class NetworkWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action == ACTION_TOGGLE) {
+        if (intent.action == ACTION_TOGGLE && hasToggleToken(intent)) {
             handleToggle(context)
         }
     }
@@ -57,7 +79,9 @@ class NetworkWidgetProvider : AppWidgetProvider() {
         scope.launch {
             val result = NetworkModeHelper.toggleNetworkMode(context)
             val msg = if (result.success) {
-                "已切换到 ${result.mode.label}"
+                context.getString(
+                    R.string.toast_switch_to, context.getString(result.mode.labelRes)
+                )
             } else {
                 result.message
             }
@@ -76,44 +100,59 @@ class NetworkWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         widgetId: Int
     ) {
-        val views = RemoteViews(context.packageName, R.layout.widget_network)
-
-        // 当前网络模式
-        val currentMode = NetworkModeHelper.getCurrentMode(context)
-        views.setTextViewText(R.id.tv_widget_mode, currentMode.label)
-
-        // 运营商 + 信号
-        try {
-            val signalInfo = NetworkInfoHelper.getSignalInfo(context)
-            val dataSim = signalInfo.sims.find { it.isDataSim }
-            val carrier = dataSim?.carrierName ?: "未知运营商"
-            val netType = dataSim?.networkTypeName
-            val carrierText = buildString {
-                append(carrier)
-                if (netType != null) append(" · $netType")
-            }
-            views.setTextViewText(R.id.tv_widget_carrier, carrierText)
-
-            // 信号信息
-            val dbm = dataSim?.signalDbm
-            val level = dataSim?.signalLevel ?: 0
-            val signalText = buildString {
-                if (level > 0) append("$level/4 格")
-                if (dbm != null) {
-                    if (isNotEmpty()) append("  ")
-                    append("${dbm} dBm")
-                }
-                if (isEmpty()) append("无信号")
-            }
-            views.setTextViewText(R.id.tv_widget_signal, signalText)
-        } catch (_: Exception) {
-            views.setTextViewText(R.id.tv_widget_carrier, "未知运营商")
-            views.setTextViewText(R.id.tv_widget_signal, "")
+        scope.launch {
+            applyViews(context, appWidgetManager, widgetId, loadTexts(context))
         }
+    }
+
+    private suspend fun loadTexts(context: Context): WidgetTexts = withContext(Dispatchers.IO) {
+        val modeLabel = try {
+            context.getString(NetworkModeHelper.getCurrentMode(context).labelRes)
+        } catch (_: Exception) {
+            ""
+        }
+
+        var carrierText = context.getString(R.string.widget_carrier_unknown)
+        var signalText = ""
+        try {
+            val dataSim = NetworkInfoHelper.getSignalInfo(context).sims.find { it.isDataSim }
+            val carrier = dataSim?.carrierName ?: context.getString(R.string.widget_carrier_unknown)
+            val netType = dataSim?.networkTypeName
+            carrierText = if (netType != null) {
+                context.getString(R.string.widget_carrier_net, carrier, netType)
+            } else {
+                carrier
+            }
+            signalText = buildString {
+                val level = dataSim?.signalLevel ?: 0
+                val dbm = dataSim?.signalDbm
+                if (level > 0) append(context.getString(R.string.widget_signal_bars, level))
+                if (dbm != null) {
+                    if (isNotEmpty()) append(context.getString(R.string.signal_separator))
+                    append(context.getString(R.string.signal_dbm, dbm))
+                }
+                if (isEmpty()) append(context.getString(R.string.widget_signal_none))
+            }
+        } catch (_: Exception) {}
+
+        WidgetTexts(modeLabel, carrierText, signalText)
+    }
+
+    private fun applyViews(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        widgetId: Int,
+        texts: WidgetTexts
+    ) {
+        val views = RemoteViews(context.packageName, R.layout.widget_network)
+        views.setTextViewText(R.id.tv_widget_mode, texts.modeLabel)
+        views.setTextViewText(R.id.tv_widget_carrier, texts.carrierText)
+        views.setTextViewText(R.id.tv_widget_signal, texts.signalText)
 
         // 切换按钮点击
         val toggleIntent = Intent(context, NetworkWidgetProvider::class.java).apply {
             action = ACTION_TOGGLE
+            putExtra(EXTRA_TOGGLE_TOKEN, TOGGLE_TOKEN)
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context, 0, toggleIntent,

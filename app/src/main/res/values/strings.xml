@@ -1,7 +1,165 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- 应用与小组件 -->
     <string name="app_name">网络切换</string>
     <string name="widget_name">网络切换</string>
+    <string name="widget_name_resizable">网络切换-自由尺寸</string>
     <string name="widget_description">显示当前网络模式，一键切换 4G/5G</string>
     <string name="widget_description_resizable">内容同网络切换组件，尺寸可自由拉伸，文字随大小缩放</string>
+
+    <!-- 网络模式与制式 -->
+    <string name="mode_4g">4G</string>
+    <string name="mode_5g">5G</string>
+    <string name="mode_desc_4g">当前使用 4G LTE 网络</string>
+    <string name="mode_desc_5g">当前使用 5G NR 网络</string>
+    <string name="net_2g">2G</string>
+    <string name="net_3g">3G</string>
+    <string name="net_lte">LTE</string>
+    <string name="net_nr">5G NR</string>
+
+    <!-- 主界面 -->
+    <string name="current_network_title">当前网络</string>
+    <string name="btn_toggle_network">切换 4G/5G</string>
+    <string name="btn_toggle_working">切换中…</string>
+    <string name="btn_toggle_disabled">需要 Shizuku 或 Root</string>
+    <string name="no_sim">无 SIM 卡</string>
+    <string name="carrier_unknown">未知</string>
+
+    <!-- IP 列表 -->
+    <string name="section_ip">IP 地址</string>
+    <string name="ip_tap_to_copy">点按可复制</string>
+    <string name="ip_empty">未检测到网络接口</string>
+    <string name="ip_copy_label">IP 地址</string>
+    <string name="ip_label_mobile">移动网络</string>
+    <string name="ip_label_wlan">WLAN</string>
+    <string name="ip_label_ethernet">以太网</string>
+    <string name="ip_label_vpn">VPN</string>
+    <string name="sim_label">SIM%1$d</string>
+    <string name="data_sim_mark"> ★</string>
+    <string name="data_sim_star">★</string>
+    <string name="ip_entry_header">%1$s（%2$s）</string>
+    <string name="ip_value_prefix">—  %1$s</string>
+    <string name="ip_value_v4">IPv4 %1$s</string>
+    <string name="ip_value_v6">IPv6 %1$s</string>
+    <string name="ip_standby_note">（待机承载）</string>
+
+    <!-- 授权状态 -->
+    <string name="section_auth">授权状态</string>
+    <string name="status_checking">检查中…</string>
+    <string name="shizuku_authorized">Shizuku 已授权 — 可一键切换</string>
+    <string name="shizuku_running">Shizuku 运行中 — 点击授权</string>
+    <string name="shizuku_not_running">Shizuku 未运行 — 请启动 Shizuku</string>
+    <string name="shizuku_not_installed">未安装 Shizuku</string>
+    <string name="shizuku_ready">Shizuku 已就绪</string>
+    <string name="btn_shizuku_auth">授权 Shizuku</string>
+    <string name="root_available">Root 可用</string>
+    <string name="root_unavailable">Root 不可用</string>
+
+    <!-- 外观 -->
+    <string name="section_appearance">外观</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+    <string name="theme_system">跟随系统</string>
+    <string name="section_accent">主题色</string>
+
+    <!-- 入口按钮 -->
+    <string name="btn_wifi_password">查看已保存 WiFi 密码</string>
+    <string name="btn_open_settings">打开系统网络设置</string>
+    <string name="btn_refresh">刷新状态</string>
+
+    <!-- 剪贴板条目标签（会在系统剪贴板界面显示） -->
+    <string name="clipboard_wifi_password_label">WiFi 密码</string>
+
+    <!-- 提示与 Toast -->
+    <string name="toast_copied">已复制</string>
+    <string name="toast_copied_password">已复制密码</string>
+    <string name="toast_shizuku_granted">Shizuku 授权成功</string>
+    <string name="toast_shizuku_denied">Shizuku 授权被拒绝</string>
+    <string name="toast_shizuku_not_running_guide">Shizuku 未运行：点「授权 Shizuku」启动并授权</string>
+    <string name="toast_shizuku_authorized_short">Shizuku 已授权</string>
+    <string name="toast_shizuku_start_first">请先启动 Shizuku 应用</string>
+    <string name="toast_shizuku_install_first">请先安装 Shizuku</string>
+    <string name="toast_shizuku_needed">需要 Shizuku：请先启动 Shizuku 应用</string>
+    <string name="toast_shizuku_allow_hint">请在 Shizuku 授权弹窗中允许</string>
+    <string name="toast_switch_to">已切换到 %1$s</string>
+    <string name="toast_switch_failed_manual">切换失败，需要手动操作</string>
+
+    <!-- WiFi 密码页 -->
+    <string name="wifi_password_page">已保存的 WiFi 密码</string>
+    <string name="back">返回</string>
+    <string name="btn_show">显示</string>
+    <string name="btn_hide">隐藏</string>
+    <string name="btn_copy">复制</string>
+    <string name="password_hidden">••••••••••••</string>
+    <string name="password_none">无密码（开放网络或企业网）</string>
+    <string name="detail_mac">MAC 地址</string>
+    <string name="detail_band">频段信道</string>
+    <string name="detail_hidden">隐藏网络</string>
+    <string name="detail_auth">认证方式</string>
+    <string name="detail_band_channel">%1$s · 信道 %2$d</string>
+    <string name="yes">是</string>
+    <string name="no">否</string>
+    <string name="placeholder_dash">—</string>
+    <string name="list_separator"> / </string>
+    <string name="wifi_status_empty">本机没有已保存的 WiFi 网络</string>
+    <string name="wifi_status_denied">Shizuku 授权被拒绝，无法读取密码</string>
+    <string name="wifi_status_error">读取失败：%1$s</string>
+    <string name="wifi_status_binder_failed">特权接口调用失败（%1$s：%2$s），Root 兜底也未成功</string>
+    <string name="wifi_binder_error">无法获取 IWifiManager binder</string>
+    <string name="wifi_action_retry">重试</string>
+    <string name="wifi_action_grant">去授权</string>
+    <string name="wifi_action_regrant">重新授权</string>
+
+    <!-- Shizuku 状态提示 -->
+    <string name="shizuku_hint_running">Shizuku 正在运行，但尚未授权本应用</string>
+    <string name="shizuku_hint_not_running">Shizuku 未运行，请先打开 Shizuku</string>
+    <string name="shizuku_hint_not_installed">未安装 Shizuku，请先安装并启动</string>
+
+    <!-- 执行错误 -->
+    <string name="err_shizuku_unavailable">Shizuku 未运行或未授权</string>
+    <string name="err_shizuku_api">Shizuku API 不可用（版本不兼容）</string>
+    <string name="err_timeout">命令执行超时</string>
+    <string name="err_root_failed">Root 执行失败</string>
+    <string name="err_unknown">未知错误</string>
+
+    <!-- 频段 -->
+    <string name="band_24">2.4 GHz</string>
+    <string name="band_5">5 GHz</string>
+    <string name="band_6">6 GHz</string>
+
+    <!-- 加密方式 -->
+    <string name="sec_wpa3">WPA3</string>
+    <string name="sec_8021x">802.1X 企业网</string>
+    <string name="sec_owe">开放（增强）</string>
+    <string name="sec_wpa">WPA/WPA2</string>
+    <string name="sec_wep">WEP</string>
+    <string name="sec_open">开放</string>
+    <string name="sec_other">其他</string>
+
+    <!-- 认证方式明细 -->
+    <string name="auth_sae">SAE（WPA3-Personal）</string>
+    <string name="auth_suiteb">Suite-B-192（WPA3 企业 192 位）</string>
+    <string name="auth_eap">802.1X EAP（WPA/WPA2/WPA3 企业）</string>
+    <string name="auth_psk">PSK（WPA/WPA2-Personal）</string>
+    <string name="auth_owe">OWE（增强开放）</string>
+    <string name="auth_ieee8021x">IEEE 802.1X</string>
+    <string name="auth_wapi_psk">WAPI-PSK</string>
+    <string name="auth_wapi_cert">WAPI-CERT</string>
+    <string name="auth_dpp">DPP（Easy Connect）</string>
+    <string name="auth_none">无认证（开放网络）</string>
+
+    <!-- 小组件 -->
+    <string name="widget_btn_label">4G/5G</string>
+    <string name="widget_btn_desc">切换</string>
+    <string name="widget_carrier_unknown">未知运营商</string>
+    <string name="widget_signal_bars">%1$d/4 格</string>
+    <string name="signal_dbm">%1$d dBm</string>
+    <string name="widget_signal_none">无信号</string>
+    <string name="widget_carrier_net">%1$s · %2$s</string>
+    <string name="signal_separator">  </string>
+    <string name="widget_preview_mode">LTE</string>
+    <string name="widget_preview_carrier">中国电信</string>
+    <string name="widget_preview_signal">3/4 格  -89 dBm</string>
+    <string name="widget_preview_sims">SIM1 中国电信 ★ LTE  -96 dBm</string>
+    <string name="widget_preview_ips">SIM1 10.144.179.230</string>
 </resources>

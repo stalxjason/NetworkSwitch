@@ -1,9 +1,6 @@
 package io.github.stalxjason.networkswitch
 
 import android.Manifest
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Typeface
@@ -11,12 +8,6 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.text.Spannable
-import android.text.SpannableStringBuilder
-import android.text.style.BulletSpan
-import android.text.style.ForegroundColorSpan
-import android.text.style.RelativeSizeSpan
-import android.text.style.StyleSpan
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -26,17 +17,20 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.color.MaterialColors
 import io.github.stalxjason.networkswitch.databinding.ActivityMainBinding
 import io.github.stalxjason.networkswitch.wifi.WifiListActivity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private val ipAdapter = IpListAdapter()
     private var pendingWifiPage = false
     private var initializingThemeUI = false
 
@@ -54,7 +48,7 @@ class MainActivity : AppCompatActivity() {
                 lifecycleScope.launch { refreshStatus() }
                 Toast.makeText(
                     this,
-                    if (granted) "Shizuku 授权成功" else "Shizuku 授权被拒绝",
+                    if (granted) R.string.toast_shizuku_granted else R.string.toast_shizuku_denied,
                     Toast.LENGTH_SHORT
                 ).show()
                 // 授权前点过「查看 WiFi 密码」→ 授权成功直接进入
@@ -71,22 +65,34 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 配置重建（换主题 / 旋转）后仍需保留「授权完去 WiFi 密码页」的意图
+        pendingWifiPage = savedInstanceState?.getBoolean(KEY_PENDING_WIFI_PAGE) ?: false
+
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         setupUI()
         setupThemeUI()
         autoShizukuPrompt()
 
-        val permsNeeded = arrayOf(
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_BASIC_PHONE_STATE
-        ).filter {
+        // READ_BASIC_PHONE_STATE 是 API 33 常量，minSdk 31 不能参与运行时判断，
+        // 否则会被内联进字节码（lint InlinedApi）
+        val wantedPerms = buildList {
+            add(Manifest.permission.READ_PHONE_STATE)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.READ_BASIC_PHONE_STATE)
+            }
+        }.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
-        if (permsNeeded.isNotEmpty()) {
-            requestPhonePermission.launch(permsNeeded.toTypedArray())
+        if (wantedPerms.isNotEmpty()) {
+            requestPhonePermission.launch(wantedPerms.toTypedArray())
         } else {
             lifecycleScope.launch { refreshStatus() }
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_PENDING_WIFI_PAGE, pendingWifiPage)
     }
 
     /**
@@ -94,14 +100,11 @@ class MainActivity : AppCompatActivity() {
      * 未运行 → 提示引导（点「授权 Shizuku」会拉起 Shizuku 应用）。
      */
     private fun autoShizukuPrompt() {
-        when (ShizukuHelper.getStatus()) {
+        when (ShizukuHelper.getStatus(this)) {
             is ShizukuHelper.Status.Running -> ShizukuHelper.requestPermission()
             is ShizukuHelper.Status.NotRunning ->
-                Toast.makeText(
-                    this,
-                    "Shizuku 未运行：点「授权 Shizuku」启动并授权",
-                    Toast.LENGTH_LONG
-                ).show()
+                Toast.makeText(this, R.string.toast_shizuku_not_running_guide, Toast.LENGTH_LONG)
+                    .show()
             else -> {}
         }
     }
@@ -172,17 +175,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupUI() {
+        binding.ipRecycler.layoutManager = LinearLayoutManager(this)
+        binding.ipRecycler.adapter = ipAdapter
+
         binding.btnToggle.setOnClickListener { performToggle() }
         binding.btnShizukuAuth.setOnClickListener {
-            when (val status = ShizukuHelper.getStatus()) {
+            when (val status = ShizukuHelper.getStatus(this)) {
                 is ShizukuHelper.Status.Authorized ->
-                    Toast.makeText(this, "Shizuku 已授权", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, R.string.toast_shizuku_authorized_short, Toast.LENGTH_SHORT)
+                        .show()
                 is ShizukuHelper.Status.Running -> ShizukuHelper.requestPermission()
                 is ShizukuHelper.Status.NotRunning -> {
-                    Toast.makeText(this, "请先启动 Shizuku 应用", Toast.LENGTH_LONG).show()
-                    openShizukuApp()
+                    Toast.makeText(this, R.string.toast_shizuku_start_first, Toast.LENGTH_LONG)
+                        .show()
+                    launchShizukuApp()
                 }
-                else -> Toast.makeText(this, "请先安装 Shizuku", Toast.LENGTH_LONG).show()
+                else ->
+                    Toast.makeText(this, R.string.toast_shizuku_install_first, Toast.LENGTH_LONG)
+                        .show()
             }
             lifecycleScope.launch { refreshStatus() }
         }
@@ -198,76 +208,74 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openWifiPasswordPage() {
-        when (ShizukuHelper.getStatus()) {
+        when (ShizukuHelper.getStatus(this)) {
             is ShizukuHelper.Status.Authorized ->
                 startActivity(Intent(this, WifiListActivity::class.java))
             is ShizukuHelper.Status.Running -> {
                 pendingWifiPage = true
                 ShizukuHelper.requestPermission()
-                Toast.makeText(this, "请在 Shizuku 授权弹窗中允许", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, R.string.toast_shizuku_allow_hint, Toast.LENGTH_LONG).show()
             }
             else -> {
-                Toast.makeText(this, "需要 Shizuku：请先启动 Shizuku 应用", Toast.LENGTH_LONG).show()
-                openShizukuApp()
+                Toast.makeText(this, R.string.toast_shizuku_needed, Toast.LENGTH_LONG).show()
+                launchShizukuApp()
             }
         }
     }
 
-    private fun openShizukuApp() {
-        try {
-            val intent = packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
-                ?: packageManager.getLaunchIntentForPackage("rikka.shizuku")
-            if (intent != null) startActivity(intent)
-        } catch (_: Exception) {}
+    /** 拉起 Shizuku 应用；未安装或无法启动时提示安装 */
+    private fun launchShizukuApp() {
+        if (!ShizukuHelper.openShizukuApp(this)) {
+            Toast.makeText(this, R.string.toast_shizuku_install_first, Toast.LENGTH_LONG).show()
+        }
     }
 
-    private suspend fun refreshStatus() = withContext(Dispatchers.IO) {
+    /**
+     * 刷新全部状态。五段查询互不依赖：并行发起、各自 await 后立即刷新对应区域，
+     * 避免串行等待（shell 回读 + su 探测）拖慢首屏。
+     */
+    private suspend fun refreshStatus() = coroutineScope {
+        val modeDeferred = async(Dispatchers.IO) { NetworkModeHelper.queryMode(this@MainActivity) }
+        val signalDeferred = async(Dispatchers.IO) { NetworkInfoHelper.getSignalInfo(this@MainActivity) }
+        val ipDeferred = async(Dispatchers.IO) { IpHelper.getAllIpEntries(this@MainActivity) }
+        val shizukuDeferred = async { ShizukuHelper.getStatus(this@MainActivity) }
+        val rootDeferred = async(Dispatchers.IO) { NetworkModeHelper.hasRootAccess() }
+
         // 网络模式（shell 回读真值，不可用时回落 settings 键）
-        val currentMode = NetworkModeHelper.queryMode(this@MainActivity)
-        withContext(Dispatchers.Main) {
-            binding.tvCurrentMode.text = currentMode.label
-            binding.tvModeDesc.text = when (currentMode) {
-                NetworkMode.LTE -> "当前使用 4G LTE 网络"
-                NetworkMode.NR_5G -> "当前使用 5G NR 网络"
-            }
-        }
+        val currentMode = modeDeferred.await()
+        binding.tvCurrentMode.text = getString(currentMode.labelRes)
+        binding.tvModeDesc.text = getString(currentMode.descRes)
 
         // 信号与运营商（双卡）
-        val signalInfo = NetworkInfoHelper.getSignalInfo(this@MainActivity)
-        withContext(Dispatchers.Main) {
-            updateSignalView(signalInfo)
-        }
+        updateSignalView(signalDeferred.await())
 
         // IP 列表
-        val ipList = IpHelper.getAllIpEntries(this@MainActivity)
-        withContext(Dispatchers.Main) {
-            updateIpList(ipList)
-        }
+        updateIpList(ipDeferred.await())
 
         // Shizuku / Root 状态
-        val shizukuStatus = ShizukuHelper.getStatus()
-        withContext(Dispatchers.Main) {
-            binding.tvShizukuStatus.text = when (shizukuStatus) {
-                is ShizukuHelper.Status.Authorized -> "Shizuku 已授权 — 可一键切换"
-                is ShizukuHelper.Status.Running -> "Shizuku 运行中 — 点击授权"
-                is ShizukuHelper.Status.NotRunning -> "Shizuku 未运行 — 请启动 Shizuku"
-                is ShizukuHelper.Status.NotInstalled -> "未安装 Shizuku"
-            }
-        }
+        val shizukuStatus = shizukuDeferred.await()
+        binding.tvShizukuStatus.text = when (shizukuStatus) {
+            is ShizukuHelper.Status.Authorized -> R.string.shizuku_authorized
+            is ShizukuHelper.Status.Running -> R.string.shizuku_running
+            is ShizukuHelper.Status.NotRunning -> R.string.shizuku_not_running
+            is ShizukuHelper.Status.NotInstalled -> R.string.shizuku_not_installed
+        }.let { getString(it) }
 
-        val hasRoot = NetworkModeHelper.hasRootAccess()
-        withContext(Dispatchers.Main) {
-            binding.tvRootStatus.text = if (hasRoot) "Root 可用" else "Root 不可用"
+        val hasRoot = rootDeferred.await()
+        binding.tvRootStatus.text = getString(
+            if (hasRoot) R.string.root_available else R.string.root_unavailable
+        )
 
-            val canToggle = ShizukuHelper.isAvailable() || hasRoot
-            binding.btnToggle.isEnabled = canToggle
-            binding.btnToggle.text = if (canToggle) "切换 4G/5G" else "需要 Shizuku 或 Root"
+        val canToggle = shizukuStatus is ShizukuHelper.Status.Authorized || hasRoot
+        binding.btnToggle.isEnabled = canToggle
+        binding.btnToggle.text = getString(
+            if (canToggle) R.string.btn_toggle_network else R.string.btn_toggle_disabled
+        )
 
-            binding.btnShizukuAuth.text = when (shizukuStatus) {
-                is ShizukuHelper.Status.Authorized -> "Shizuku 已就绪"
-                else -> "授权 Shizuku"
-            }
-        }
+        binding.btnShizukuAuth.text = when (shizukuStatus) {
+            is ShizukuHelper.Status.Authorized -> R.string.shizuku_ready
+            else -> R.string.btn_shizuku_auth
+        }.let { getString(it) }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -281,7 +289,7 @@ class MainActivity : AppCompatActivity() {
 
         if (info.sims.isEmpty()) {
             val tv = TextView(this).apply {
-                text = "无 SIM 卡"
+                text = getString(R.string.no_sim)
                 textSize = 14f
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
             }
@@ -290,7 +298,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         val primaryColor   = primaryColor()
-        val hintColor      = ContextCompat.getColor(this, R.color.text_hint)
         val textPrimary    = ContextCompat.getColor(this, R.color.text_primary)
         val textSecondary  = ContextCompat.getColor(this, R.color.text_secondary)
         val dividerColor   = ContextCompat.getColor(this, R.color.divider)
@@ -333,7 +340,7 @@ class MainActivity : AppCompatActivity() {
             // SIM 标签：数据卡用实色主题芯片（半透明 tint 会把主题色洗淡导致白字不可读），
             // 其余卡用中性芯片
             val tvSlot = TextView(this).apply {
-                text = "SIM${sim.slotIndex + 1}"
+                text = getString(R.string.sim_label, sim.slotIndex + 1)
                 textSize = 10f
                 typeface = Typeface.DEFAULT_BOLD
                 setPadding(dpToPx(8), dpToPx(3), dpToPx(8), dpToPx(3))
@@ -357,7 +364,7 @@ class MainActivity : AppCompatActivity() {
 
             // 运营商名
             val tvCarrier = TextView(this).apply {
-                text = sim.carrierName ?: "未知"
+                text = sim.carrierName ?: getString(R.string.carrier_unknown)
                 textSize = 15f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(textPrimary)
@@ -381,7 +388,7 @@ class MainActivity : AppCompatActivity() {
             // 数据卡标记 ★
             if (sim.isDataSim) {
                 val tvMark = TextView(this).apply {
-                    text = "★"
+                    text = getString(R.string.data_sim_star)
                     textSize = 11f
                     setTextColor(primaryColor)
                     layoutParams = LinearLayout.LayoutParams(
@@ -395,7 +402,7 @@ class MainActivity : AppCompatActivity() {
             // dBm
             sim.signalDbm?.let { dbm ->
                 val tvDbm = TextView(this).apply {
-                    text = "$dbm dBm"
+                    text = getString(R.string.signal_dbm, dbm)
                     textSize = 11f
                     setTextColor(textSecondary)
                 }
@@ -407,111 +414,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // IP 列表（ConnectivityManager 网络 → SIM 归属），单行要点式：
-    //   • 移动网络 SIM1 中国电信 ★（rmnet_data3）— IPv4 x.x.x.x ＋ IPv6 xxxx
-    //   • 移动网络 SIM1 中国电信（rmnet_data1）— IPv6 xxxx（待机承载）
+    // IP 列表（ConnectivityManager 网络 → SIM 归属），每条一张卡片：
+    //   移动网络 SIM1 中国电信 ★（rmnet_data3）
+    //   —  IPv4 x.x.x.x
+    //   —  IPv6 xxxx（待机承载）
+    // 行内排版见 IpListAdapter
     // ─────────────────────────────────────────────────────────────────────────
     private fun updateIpList(ipList: List<IpHelper.IpEntry>) {
-        val container = binding.ipListContainer
-        container.removeAllViews()
-
-        if (ipList.isEmpty()) {
-            container.addView(createIpTextView("未检测到网络接口"))
-            return
-        }
-
-        for (entry in ipList) {
-            container.addView(createIpLineView(entry))
-        }
-    }
-
-    private fun entryLabelMain(entry: IpHelper.IpEntry): String = when (entry.kind) {
-        IpHelper.Kind.MOBILE -> buildString {
-            append("移动网络")
-            entry.simSlotIndex?.let { append(" SIM${it + 1}") }
-            entry.simCarrier?.let { c -> append(" ").append(c) }
-            if (entry.isActiveData) append(" ★")
-        }
-        IpHelper.Kind.WIFI -> "WLAN"
-        IpHelper.Kind.ETHERNET -> "以太网"
-        IpHelper.Kind.VPN -> "VPN"
-    }
-
-    /** 单行 IP 条目：• 标签（接口名）— IP…；点按复制该条的 IP */
-    private fun createIpLineView(entry: IpHelper.IpEntry): View {
-        val textPrimary = ContextCompat.getColor(this, R.color.text_primary)
-        val textSecondary = ContextCompat.getColor(this, R.color.text_secondary)
-        val textHint = ContextCompat.getColor(this, R.color.text_hint)
-
-        val label = "${entryLabelMain(entry)}（${entry.ifaceName}）"
-        val ips = buildList {
-            entry.ipv4?.let { add("IPv4 $it") }
-            entry.ipv6?.let { add("IPv6 $it") }
-        }
-        val standby = entry.kind == IpHelper.Kind.MOBILE &&
-                !entry.isActiveData && entry.simSubscriptionId != null
-
-        return TextView(this).apply {
-            textSize = 13f
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dpToPx(4); bottomMargin = dpToPx(4) }
-
-            val ssb = SpannableStringBuilder()
-            ssb.append(label)
-            ssb.setSpan(
-                StyleSpan(Typeface.BOLD), 0, label.length,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            ssb.setSpan(
-                BulletSpan(dpToPx(6), primaryColor()),
-                0, label.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-
-            // 每个 IP 单独一行
-            ips.forEachIndexed { i, item ->
-                ssb.append("\n    —  ")
-                val start = ssb.length
-                ssb.append(item)
-                ssb.setSpan(
-                    ForegroundColorSpan(textSecondary), start, ssb.length,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-                if (standby && i == ips.lastIndex) {
-                    val note = ssb.length
-                    ssb.append("（待机承载）")
-                    ssb.setSpan(
-                        ForegroundColorSpan(textHint), note, ssb.length,
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                    ssb.setSpan(
-                        RelativeSizeSpan(0.85f), note, ssb.length,
-                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                    )
-                }
-            }
-
-            text = ssb
-            setOnClickListener {
-                copyTextToClipboard(
-                    ips.joinToString("\n") { it.substringAfter(' ') },
-                    "IP 地址"
-                )
-            }
-        }
-    }
-
-    private fun createIpTextView(text: String): TextView {
-        return TextView(this).apply {
-            this.text = text
-            textSize = 13f
-            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { topMargin = dpToPx(3); bottomMargin = dpToPx(3) }
-        }
+        binding.ipRecycler.visibility = if (ipList.isEmpty()) View.GONE else View.VISIBLE
+        binding.tvIpEmpty.visibility = if (ipList.isEmpty()) View.VISIBLE else View.GONE
+        ipAdapter.submit(ipList)
     }
 
     /** 小号圆角芯片（网络类型 / IPv4·IPv6 前缀） */
@@ -527,43 +439,43 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun copyTextToClipboard(text: String, label: String = "文本") {
-        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        cm.setPrimaryClip(ClipData.newPlainText(label, text))
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            Toast.makeText(this, "已复制", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     /** 当前主题色（跟随「外观」里的主题色选择） */
     private fun primaryColor(): Int =
         MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorPrimary)
 
     private fun performToggle() {
         binding.btnToggle.isEnabled = false
-        binding.btnToggle.text = "切换中..."
+        binding.btnToggle.text = getString(R.string.btn_toggle_working)
 
         lifecycleScope.launch {
-            val result = NetworkModeHelper.toggleNetworkMode(this@MainActivity)
-            binding.btnToggle.isEnabled = true
+            try {
+                val result = NetworkModeHelper.toggleNetworkMode(this@MainActivity)
 
-            if (result.success) {
-                Toast.makeText(this@MainActivity, result.message, Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this@MainActivity, result.message, Toast.LENGTH_LONG).show()
-                try {
-                    startActivity(Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS))
-                } catch (e: Exception) {
-                    startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+                if (result.success) {
+                    Toast.makeText(this@MainActivity, result.message, Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this@MainActivity, result.message, Toast.LENGTH_LONG).show()
+                    try {
+                        startActivity(Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS))
+                    } catch (e: Exception) {
+                        startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+                    }
                 }
-            }
 
-            refreshStatus()
-            NetworkWidgetProvider.updateWidget(this@MainActivity)
-            ResizableNetworkWidgetProvider.updateWidget(this@MainActivity)
+                refreshStatus()
+                NetworkWidgetProvider.updateWidget(this@MainActivity)
+                ResizableNetworkWidgetProvider.updateWidget(this@MainActivity)
+            } finally {
+                // 任何异常都要解锁按钮，否则卡在「切换中…」永久不可点
+                binding.btnToggle.isEnabled = true
+            }
         }
     }
 
     private fun dpToPx(dp: Int): Int =
         (dp * resources.displayMetrics.density + 0.5f).toInt()
+
+    private companion object {
+        const val KEY_PENDING_WIFI_PAGE = "pending_wifi_page"
+    }
 }

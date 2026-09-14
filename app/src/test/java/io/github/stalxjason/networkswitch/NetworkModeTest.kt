@@ -15,26 +15,6 @@ class NetworkModeTest {
         assertEquals(33, NetworkMode.NR_5G.telephonyType)
     }
 
-    @Test
-    fun `fromTelephonyType returns LTE for type 21`() {
-        assertEquals(NetworkMode.LTE, NetworkMode.fromTelephonyType(21))
-    }
-
-    @Test
-    fun `fromTelephonyType returns NR_5G for type 33`() {
-        assertEquals(NetworkMode.NR_5G, NetworkMode.fromTelephonyType(33))
-    }
-
-    @Test
-    fun `fromTelephonyType returns null for unknown type`() {
-        assertNull(NetworkMode.fromTelephonyType(99))
-    }
-
-    @Test
-    fun `fromTelephonyType returns null for type 0`() {
-        assertNull(NetworkMode.fromTelephonyType(0))
-    }
-
     // ── nrAllowedFromShellOutput ──
 
     @Test
@@ -81,5 +61,26 @@ class NetworkModeTest {
     fun `garbage output returns null`() {
         assertNull(NetworkMode.nrAllowedFromShellOutput("Error: unknown command"))
         assertNull(NetworkMode.nrAllowedFromShellOutput(""))
+    }
+
+    @Test
+    fun `error text with slot number is not mistaken for a mask`() {
+        assertNull(NetworkMode.nrAllowedFromShellOutput("Failed to set slot 0"))
+        assertNull(NetworkMode.nrAllowedFromShellOutput("usage: get-allowed-network-types-for-users"))
+    }
+
+    @Test
+    fun `digit run longer than 20 bits is not truncated to a mask`() {
+        assertNull(NetworkMode.nrAllowedFromShellOutput("110000010000000000001"))
+    }
+
+    @Test
+    fun `small integers are skipped and the first real mask wins`() {
+        assertEquals(false, NetworkMode.nrAllowedFromShellOutput("slot 0 allowed=8192 reason 3"))
+    }
+
+    @Test
+    fun `trailing numbers do not shadow the mask`() {
+        assertEquals(true, NetworkMode.nrAllowedFromShellOutput("slot 1 allowed=1056768 code 3"))
     }
 }

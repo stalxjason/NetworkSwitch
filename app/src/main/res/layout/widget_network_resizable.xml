@@ -25,7 +25,7 @@
                 android:id="@+id/tv_widget_mode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="LTE"
+                android:text="@string/widget_preview_mode"
                 android:textColor="#FFFFFF"
                 android:textSize="22sp"
                 android:textStyle="bold" />
@@ -34,7 +34,7 @@
                 android:id="@+id/tv_widget_carrier"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="中国电信"
+                android:text="@string/widget_preview_carrier"
                 android:textColor="#80FFFFFF"
                 android:textSize="10sp" />
 
@@ -42,7 +42,7 @@
                 android:id="@+id/tv_widget_signal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="3/4 格  -89 dBm"
+                android:text="@string/widget_preview_signal"
                 android:textColor="#66FFFFFF"
                 android:textSize="9sp" />
 
@@ -52,7 +52,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
-                android:text="SIM1 中国电信 ★ LTE  -96 dBm"
+                android:text="@string/widget_preview_sims"
                 android:textColor="#99FFFFFF"
                 android:textSize="10sp"
                 android:visibility="gone" />
@@ -62,7 +62,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="SIM1 10.144.179.230"
+                android:text="@string/widget_preview_ips"
                 android:textColor="#80FFFFFF"
                 android:textSize="9sp"
                 android:visibility="gone" />
@@ -81,14 +81,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:src="@drawable/widget_btn_bg"
-                android:contentDescription="切换" />
+                android:contentDescription="@string/widget_btn_desc" />
 
             <TextView
                 android:id="@+id/tv_widget_btn_text"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
-                android:text="4G/5G"
+                android:text="@string/widget_btn_label"
                 android:textColor="#FFFFFF"
                 android:textSize="9sp"
                 android:textStyle="bold" />

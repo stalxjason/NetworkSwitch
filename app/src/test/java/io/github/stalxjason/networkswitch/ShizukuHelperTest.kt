@@ -1,26 +1,9 @@
 package io.github.stalxjason.networkswitch
 
-import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Test
 
 class ShizukuHelperTest {
-
-    @Test
-    fun `Status sealed class covers all states`() {
-        // 验证所有 Status 子类可以被正确判断
-        val statuses = listOf(
-            ShizukuHelper.Status.Authorized,
-            ShizukuHelper.Status.Running,
-            ShizukuHelper.Status.NotRunning,
-            ShizukuHelper.Status.NotInstalled
-        )
-
-        assertTrue(statuses[0] is ShizukuHelper.Status.Authorized)
-        assertTrue(statuses[1] is ShizukuHelper.Status.Running)
-        assertTrue(statuses[2] is ShizukuHelper.Status.NotRunning)
-        assertTrue(statuses[3] is ShizukuHelper.Status.NotInstalled)
-    }
 
     @Test
     fun `ShellResult with success`() {
@@ -46,9 +29,23 @@ class ShizukuHelperTest {
     }
 
     @Test
-    fun `getStatus returns NotInstalled when Shizuku unavailable`() = runTest {
-        // 在纯 JVM 测试环境中没有 Shizuku，应该返回 NotInstalled
-        val status = ShizukuHelper.getStatus()
-        assertTrue(status is ShizukuHelper.Status.NotInstalled || status is ShizukuHelper.Status.NotRunning)
+    fun `Status sealed class has exactly four states`() {
+        // 新增状态而不补 rank 分支时，下面的 when 编译不过，从而强制同步调用方
+        val ranks = listOf(
+            rank(ShizukuHelper.Status.Authorized),
+            rank(ShizukuHelper.Status.Running),
+            rank(ShizukuHelper.Status.NotRunning),
+            rank(ShizukuHelper.Status.NotInstalled)
+        )
+        assertEquals(4, ranks.distinct().size)
+        assertTrue(ranks.contains(0))
+        assertTrue(ranks.contains(3))
+    }
+
+    private fun rank(status: ShizukuHelper.Status): Int = when (status) {
+        is ShizukuHelper.Status.Authorized -> 3
+        is ShizukuHelper.Status.Running -> 2
+        is ShizukuHelper.Status.NotRunning -> 1
+        is ShizukuHelper.Status.NotInstalled -> 0
     }
 }

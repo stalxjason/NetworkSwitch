@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 网络相关权限 -->
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 网络状态权限（读取网络能力与链路信息；App 自身不发起任何网络请求） -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- 电话状态权限（读取运营商、SIM 卡信息） -->
@@ -20,9 +19,10 @@
         <package android:name="moe.shizuku.privileged.api" />
     </queries>
 
+    <!-- WiFi 密码查看不依赖电话硬件，required=false 才能装到平板/模拟器/ChromeOS -->
     <uses-feature
         android:name="android.hardware.telephony"
-        android:required="true" />
+        android:required="false" />
 
     <application
         android:name=".NetworkSwitchApplication"
@@ -44,11 +44,13 @@
         <!-- 已保存 WiFi 密码查看 -->
         <activity
             android:name=".wifi.WifiListActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:label="@string/wifi_password_page" />
 
         <!-- 桌面 Widget -->
         <receiver
             android:name=".NetworkWidgetProvider"
+            android:label="@string/widget_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -58,11 +60,11 @@
                 android:resource="@xml/network_widget_info" />
         </receiver>
 
-        <!-- 桌面 Widget（可自由调节尺寸，文字随大小缩放） -->
+        <!-- 桌面 Widget（可自由调节尺寸，文字随尺寸缩放） -->
         <receiver
             android:name=".ResizableNetworkWidgetProvider"
-            android:exported="true"
-            android:label="网络切换-自由尺寸">
+            android:label="@string/widget_name_resizable"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>

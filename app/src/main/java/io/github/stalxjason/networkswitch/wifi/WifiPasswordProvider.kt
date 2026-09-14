@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.os.IBinder
 import android.os.Parcelable
 import android.util.Log
+import androidx.annotation.StringRes
+import io.github.stalxjason.networkswitch.R
 import io.github.stalxjason.networkswitch.ShizukuHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,6 +26,8 @@ import java.util.concurrent.TimeUnit
  *
  * 兜底通道：Android 高版本隐藏 API 收紧导致反射失败时，用 Root 读取
  * WifiConfigStore.xml 解析密码（尽力而为，仅用于展示）。
+ *
+ * 展示文案在数据层只存字符串资源 id，由 Adapter 结合 Context 解析。
  */
 object WifiPasswordProvider {
 
@@ -35,12 +39,12 @@ object WifiPasswordProvider {
     data class WifiEntry(
         val ssid: String,
         val password: String?,
-        val security: String,
+        @StringRes val securityRes: Int,
         val bssid: String? = null,
-        val band: String? = null,
+        @StringRes val bandRes: Int? = null,          // null = 频率未知
         val channel: Int? = null,
         val isHidden: Boolean = false,
-        val authDetail: String? = null
+        @StringRes val authDetailRes: List<Int> = emptyList()
     )
 
     sealed interface Result {
@@ -49,14 +53,14 @@ object WifiPasswordProvider {
         data class Error(val message: String) : Result
     }
 
-    suspend fun getSavedNetworks(): Result = withContext(Dispatchers.IO) {
-        val status = ShizukuHelper.getStatus()
+    suspend fun getSavedNetworks(context: Context): Result = withContext(Dispatchers.IO) {
+        val status = ShizukuHelper.getStatus(context)
         if (status !is ShizukuHelper.Status.Authorized) {
-            return@withContext Result.ShizukuUnavailable(shizukuHint(status))
+            return@withContext Result.ShizukuUnavailable(shizukuHint(context, status))
         }
 
         try {
-            Result.Ok(loadViaBinder())
+            Result.Ok(loadViaBinder(context))
         } catch (t: Throwable) {
             Log.w(TAG, "binder 取密失败，尝试 Root 兜底", t)
             val fallback = loadViaRootConfigStore()
@@ -64,16 +68,20 @@ object WifiPasswordProvider {
                 Result.Ok(fallback)
             } else {
                 Result.Error(
-                    "特权接口调用失败（${t.javaClass.simpleName}: ${t.message ?: "未知错误"}），Root 兜底也未成功"
+                    context.getString(
+                        R.string.wifi_status_binder_failed,
+                        t.javaClass.simpleName,
+                        t.message ?: context.getString(R.string.err_unknown)
+                    )
                 )
             }
         }
     }
 
-    private fun shizukuHint(status: ShizukuHelper.Status): String = when (status) {
-        is ShizukuHelper.Status.Running -> "Shizuku 正在运行，但尚未授权本应用"
-        is ShizukuHelper.Status.NotRunning -> "Shizuku 未运行，请先打开 Shizuku"
-        is ShizukuHelper.Status.NotInstalled -> "未安装 Shizuku，请先安装并启动"
+    private fun shizukuHint(context: Context, status: ShizukuHelper.Status): String = when (status) {
+        is ShizukuHelper.Status.Running -> context.getString(R.string.shizuku_hint_running)
+        is ShizukuHelper.Status.NotRunning -> context.getString(R.string.shizuku_hint_not_running)
+        is ShizukuHelper.Status.NotInstalled -> context.getString(R.string.shizuku_hint_not_installed)
         is ShizukuHelper.Status.Authorized -> ""
     }
 
@@ -83,13 +91,13 @@ object WifiPasswordProvider {
 
     @SuppressLint("PrivateApi")
     @Suppress("UNCHECKED_CAST")
-    private fun loadViaBinder(): List<WifiEntry> {
+    private fun loadViaBinder(context: Context): List<WifiEntry> {
         val iwm = Class.forName("android.net.wifi.IWifiManager\$Stub")
             .getMethod("asInterface", IBinder::class.java)
             .invoke(
                 null,
                 ShizukuBinderWrapper(SystemServiceHelper.getSystemService(Context.WIFI_SERVICE))
-            ) ?: error("无法获取 IWifiManager binder")
+            ) ?: error(context.getString(R.string.wifi_binder_error))
 
         val base = Class.forName("android.net.wifi.IWifiManager")
         // shell uid 被授予了读取特权配置的 system permission，无需 root
@@ -159,24 +167,29 @@ object WifiPasswordProvider {
             else -> null
         }
         val freq = frequencyOf(config)
-        val (band, channel) = bandOf(freq)
+        val (bandRes, channel) = bandOf(freq)
         return WifiEntry(
             ssid = ssid,
             password = password,
-            security = securityLabel(config),
+            securityRes = securityResOf(config),
             bssid = config.BSSID?.takeIf { it.isNotBlank() && it != "null" },
-            band = band,
+            bandRes = bandRes,
             channel = channel,
             isHidden = config.hiddenSSID,
-            authDetail = authDetailOf(config)
+            authDetailRes = authDetailResOf(config)
         )
     }
 
-    /** 频率 → 频段与信道号；频率未知返回 null */
-    private fun bandOf(freq: Int): Pair<String?, Int?> = when (freq) {
-        in 2400..2500 -> "2.4 GHz" to (freq - 2407) / 5
-        in 4900..5900 -> "5 GHz" to (freq - 5000) / 5
-        in 5900..7200 -> "6 GHz" to (freq - 5950) / 5
+    /**
+     * 频率 → 频段资源 id 与信道号；频率未知返回 null to null。
+     * 信道按 ITU-R SM.3290 计算：2.4G ch1-13 间隔 5MHz 起于 2412，
+     * ch14（仅日本）为 2484 单独处理；5G ch34 起于 5170；6G ch1 起于 5925。
+     */
+    internal fun bandOf(freq: Int): Pair<Int?, Int?> = when {
+        freq == 2484 -> R.string.band_24 to 14
+        freq in 2412..2472 -> R.string.band_24 to (freq - 2412) / 5 + 1
+        freq in 5150..5825 || freq in 5850..5895 -> R.string.band_5 to (freq - 5000) / 5
+        freq in 5925..7125 -> R.string.band_6 to (freq - 5925) / 5 + 1
         else -> null to null
     }
 
@@ -187,36 +200,38 @@ object WifiPasswordProvider {
         0
     }
 
-    private fun securityLabel(config: WifiConfiguration): String {
+    @StringRes
+    private fun securityResOf(config: WifiConfiguration): Int {
         val km = config.allowedKeyManagement
         return when {
-            km.get(WifiConfiguration.KeyMgmt.SAE) -> "WPA3"
+            km.get(WifiConfiguration.KeyMgmt.SAE) -> R.string.sec_wpa3
             km.get(WifiConfiguration.KeyMgmt.WPA_EAP) ||
-                    km.get(WifiConfiguration.KeyMgmt.IEEE8021X) -> "802.1X 企业网"
-            km.get(WifiConfiguration.KeyMgmt.OWE) -> "开放（增强）"
-            km.get(WifiConfiguration.KeyMgmt.WPA_PSK) -> "WPA/WPA2"
+                    km.get(WifiConfiguration.KeyMgmt.IEEE8021X) -> R.string.sec_8021x
+            km.get(WifiConfiguration.KeyMgmt.OWE) -> R.string.sec_owe
+            km.get(WifiConfiguration.KeyMgmt.WPA_PSK) -> R.string.sec_wpa
             km.get(WifiConfiguration.KeyMgmt.NONE) ->
-                if (config.allowedAuthAlgorithms.get(WifiConfiguration.AuthAlgorithm.SHARED)) "WEP"
-                else "开放"
-            else -> "其他"
+                if (config.allowedAuthAlgorithms.get(WifiConfiguration.AuthAlgorithm.SHARED)) R.string.sec_wep
+                else R.string.sec_open
+            else -> R.string.sec_other
         }
     }
 
-    private fun authDetailOf(config: WifiConfiguration): String {
+    /** 认证方式明细的资源 id 列表；为空时由 Adapter 退回显示 securityRes */
+    @StringRes
+    private fun authDetailResOf(config: WifiConfiguration): List<Int> {
         val km = config.allowedKeyManagement
-        val parts = buildList {
-            if (km.get(WifiConfiguration.KeyMgmt.SAE)) add("SAE（WPA3-Personal）")
-            if (km.get(WifiConfiguration.KeyMgmt.SUITE_B_192)) add("Suite-B-192（WPA3 企业 192 位）")
-            if (km.get(WifiConfiguration.KeyMgmt.WPA_EAP)) add("802.1X EAP（WPA/WPA2/WPA3 企业）")
-            if (km.get(WifiConfiguration.KeyMgmt.WPA_PSK)) add("PSK（WPA/WPA2-Personal）")
-            if (km.get(WifiConfiguration.KeyMgmt.OWE)) add("OWE（增强开放）")
-            if (km.get(WifiConfiguration.KeyMgmt.IEEE8021X)) add("IEEE 802.1X")
-            if (km.get(WifiConfiguration.KeyMgmt.WAPI_PSK)) add("WAPI-PSK")
-            if (km.get(WifiConfiguration.KeyMgmt.WAPI_CERT)) add("WAPI-CERT")
-            if (km.get(WifiConfiguration.KeyMgmt.DPP)) add("DPP（Easy Connect）")
-            if (isEmpty() && km.get(WifiConfiguration.KeyMgmt.NONE)) add("无认证（开放网络）")
+        return buildList {
+            if (km.get(WifiConfiguration.KeyMgmt.SAE)) add(R.string.auth_sae)
+            if (km.get(WifiConfiguration.KeyMgmt.SUITE_B_192)) add(R.string.auth_suiteb)
+            if (km.get(WifiConfiguration.KeyMgmt.WPA_EAP)) add(R.string.auth_eap)
+            if (km.get(WifiConfiguration.KeyMgmt.WPA_PSK)) add(R.string.auth_psk)
+            if (km.get(WifiConfiguration.KeyMgmt.OWE)) add(R.string.auth_owe)
+            if (km.get(WifiConfiguration.KeyMgmt.IEEE8021X)) add(R.string.auth_ieee8021x)
+            if (km.get(WifiConfiguration.KeyMgmt.WAPI_PSK)) add(R.string.auth_wapi_psk)
+            if (km.get(WifiConfiguration.KeyMgmt.WAPI_CERT)) add(R.string.auth_wapi_cert)
+            if (km.get(WifiConfiguration.KeyMgmt.DPP)) add(R.string.auth_dpp)
+            if (isEmpty() && km.get(WifiConfiguration.KeyMgmt.NONE)) add(R.string.auth_none)
         }
-        return parts.joinToString(" / ").ifEmpty { "未知" }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -272,29 +287,29 @@ object WifiPasswordProvider {
                 ?.takeIf { it.isNotBlank() && it != "null" }
             val keyMgmt = keyMgmtRegex.find(block)?.groupValues?.get(1)?.toIntOrNull() ?: 0
             val freq = frequencyRegex.find(block)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-            val (band, channel) = bandOf(freq)
+            val (bandRes, channel) = bandOf(freq)
             WifiEntry(
                 ssid = ssid,
                 password = psk?.trim('"')?.let(::unescapeXml),
-                security = keyMgmtLabel(keyMgmt),
+                securityRes = keyMgmtRes(keyMgmt),
                 bssid = fieldRegex("BSSID").find(block)?.groupValues?.get(1)
                     ?.takeIf { it.isNotBlank() && it != "null" },
-                band = band,
+                bandRes = bandRes,
                 channel = channel,
-                isHidden = hiddenRegex.containsMatchIn(block),
-                authDetail = null
+                isHidden = hiddenRegex.containsMatchIn(block)
             )
         }.distinctBy { it.ssid }
             .sortedBy { it.ssid.lowercase() }
             .toList()
 
-    private fun keyMgmtLabel(value: Int): String = when (value) {
-        1 -> "WPA/WPA2"          // WPA_PSK
-        2, 3 -> "802.1X 企业网"   // WPA_EAP / IEEE8021X
-        6 -> "开放（增强）"        // OWE
-        7 -> "WPA3"              // SAE
-        0 -> "开放"               // NONE
-        else -> "其他"
+    @StringRes
+    private fun keyMgmtRes(value: Int): Int = when (value) {
+        1 -> R.string.sec_wpa       // WPA_PSK
+        2, 3 -> R.string.sec_8021x  // WPA_EAP / IEEE8021X
+        6 -> R.string.sec_owe       // OWE
+        7 -> R.string.sec_wpa3      // SAE
+        0 -> R.string.sec_open      // NONE
+        else -> R.string.sec_other
     }
 
     private fun unescapeXml(text: String): String = text

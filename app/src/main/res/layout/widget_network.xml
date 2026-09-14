@@ -25,7 +25,7 @@
                 android:id="@+id/tv_widget_mode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="LTE"
+                android:text="@string/widget_preview_mode"
                 android:textColor="#FFFFFF"
                 android:textSize="22sp"
                 android:textStyle="bold" />
@@ -36,7 +36,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="0dp"
-                android:text="中国电信"
+                android:text="@string/widget_preview_carrier"
                 android:textColor="#80FFFFFF"
                 android:textSize="10sp" />
 
@@ -46,7 +46,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="0dp"
-                android:text="3/4 格  -89 dBm"
+                android:text="@string/widget_preview_signal"
                 android:textColor="#66FFFFFF"
                 android:textSize="9sp" />
 
@@ -64,14 +64,14 @@
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:src="@drawable/widget_btn_bg"
-                android:contentDescription="切换" />
+                android:contentDescription="@string/widget_btn_desc" />
 
             <TextView
                 android:id="@+id/tv_widget_btn_text"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
-                android:text="4G/5G"
+                android:text="@string/widget_btn_label"
                 android:textColor="#FFFFFF"
                 android:textSize="9sp"
                 android:textStyle="bold" />

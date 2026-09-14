@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 可自由调节尺寸的桌面小组件
@@ -21,8 +22,9 @@ import kotlinx.coroutines.launch
  * 内容与 NetworkWidgetProvider 一致；差异点：
  * 1. resizeMode 开放横向+纵向，桌面长按可任意拉伸；
  * 2. 文字与切换按钮大小随组件实际尺寸缩放
- *    （读取 AppWidgetOptions 的 dp 宽高，取宽/高缩放系数的较小值，
- *     宽度基准 110dp、高度基准 40dp，与默认 2x1 一致）。
+ *   （取宽/高缩放系数的较小值，宽度基准 110dp、高度基准 40dp，与默认 2x1 一致）。
+ *
+ * 尺寸与展示数据都在子线程取（含跨进程 binder 查询），RemoteViews 回主线程拼装。
  */
 class ResizableNetworkWidgetProvider : AppWidgetProvider() {
 
@@ -42,6 +44,17 @@ class ResizableNetworkWidgetProvider : AppWidgetProvider() {
             context.sendBroadcast(intent)
         }
     }
+
+    /** 组件当前尺寸（dp）+ 文案快照；全部查询结果，主线程只做赋值 */
+    private data class Snapshot(
+        val widthDp: Int,
+        val heightDp: Int,
+        val modeLabel: String,
+        val carrierText: String,
+        val signalText: String,
+        val simsText: String,
+        val ipText: String
+    )
 
     override fun onUpdate(
         context: Context,
@@ -65,7 +78,8 @@ class ResizableNetworkWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action == ACTION_TOGGLE) {
+        // 令牌校验见 NetworkWidgetProvider.EXTRA_TOGGLE_TOKEN 说明
+        if (intent.action == ACTION_TOGGLE && NetworkWidgetProvider.hasToggleToken(intent)) {
             handleToggle(context)
         }
     }
@@ -74,7 +88,9 @@ class ResizableNetworkWidgetProvider : AppWidgetProvider() {
         scope.launch {
             val result = NetworkModeHelper.toggleNetworkMode(context)
             val msg = if (result.success) {
-                "已切换到 ${result.mode.label}"
+                context.getString(
+                    R.string.toast_switch_to, context.getString(result.mode.labelRes)
+                )
             } else {
                 result.message
             }
@@ -93,14 +109,106 @@ class ResizableNetworkWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         widgetId: Int
     ) {
+        scope.launch {
+            applyViews(context, appWidgetManager, widgetId, loadSnapshot(context, appWidgetManager, widgetId))
+        }
+    }
+
+    private suspend fun loadSnapshot(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        widgetId: Int
+    ): Snapshot = withContext(Dispatchers.IO) {
+        // 组件当前尺寸取 MIN_*（launcher 会把它同步为当前 cell 的 dp 尺寸）。
+        // 不能用 MAX_* ——那代表容器允许的上限，拉高组件时取到的不是实际高度。
+        // （OPTION_APPWIDGET_WIDTH/HEIGHT 虽更直接，但属 @UnsupportedAppUsage 不可编译引用）
+        val opts = appWidgetManager.getAppWidgetOptions(widgetId)
+        val widthDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH).takeIf { it > 0 }
+            ?: BASE_WIDTH_DP.toInt()
+        val heightDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT).takeIf { it > 0 }
+            ?: BASE_HEIGHT_DP.toInt()
+
+        val modeLabel = try {
+            context.getString(NetworkModeHelper.getCurrentMode(context).labelRes)
+        } catch (_: Exception) {
+            ""
+        }
+
+        var carrierText = context.getString(R.string.widget_carrier_unknown)
+        var signalText = ""
+        var simsText = ""
+        try {
+            // 只查一次：窄矮组件不需要双卡明细，但查询本身必须出主线程
+            val sims = NetworkInfoHelper.getSignalInfo(context).sims
+            val dataSim = sims.find { it.isDataSim }
+            val carrier = dataSim?.carrierName ?: context.getString(R.string.widget_carrier_unknown)
+            val netType = dataSim?.networkTypeName
+            carrierText = if (netType != null) {
+                context.getString(R.string.widget_carrier_net, carrier, netType)
+            } else {
+                carrier
+            }
+            signalText = buildString {
+                val level = dataSim?.signalLevel ?: 0
+                val dbm = dataSim?.signalDbm
+                if (level > 0) append(context.getString(R.string.widget_signal_bars, level))
+                if (dbm != null) {
+                    if (isNotEmpty()) append(context.getString(R.string.signal_separator))
+                    append(context.getString(R.string.signal_dbm, dbm))
+                }
+                if (isEmpty()) append(context.getString(R.string.widget_signal_none))
+            }
+            simsText = sims.sortedBy { it.slotIndex }.joinToString("\n") { sim ->
+                buildString {
+                    append(context.getString(R.string.sim_label, sim.slotIndex + 1))
+                    append(" ")
+                    append(sim.carrierName ?: "")
+                    if (sim.isDataSim) append(context.getString(R.string.data_sim_mark))
+                    sim.networkTypeName?.let { append(" ").append(it) }
+                    sim.signalDbm?.let {
+                        append(context.getString(R.string.signal_separator))
+                        append(context.getString(R.string.signal_dbm, it))
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        val ipText = try {
+            IpHelper.getAllIpEntries(context).take(4).joinToString("\n") { entry ->
+                buildString {
+                    append(ipKindLabel(context, entry))
+                    append(context.getString(R.string.signal_separator))
+                    append(entry.ipv4 ?: entry.ipv6 ?: "")
+                }
+            }
+        } catch (_: Exception) {
+            ""
+        }
+
+        Snapshot(widthDp, heightDp, modeLabel, carrierText, signalText, simsText, ipText)
+    }
+
+    /** 紧凑行前缀：移动卡显示 SIM 号（归属不到时退回网卡名），其余显示接口类型 */
+    private fun ipKindLabel(context: Context, entry: IpHelper.IpEntry): String = when (entry.kind) {
+        IpHelper.Kind.MOBILE -> entry.simSlotIndex?.let {
+            context.getString(R.string.sim_label, it + 1)
+        } ?: entry.ifaceName
+        IpHelper.Kind.WIFI -> context.getString(R.string.ip_label_wlan)
+        IpHelper.Kind.ETHERNET -> context.getString(R.string.ip_label_ethernet)
+        IpHelper.Kind.VPN -> context.getString(R.string.ip_label_vpn)
+    }
+
+    private fun applyViews(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        widgetId: Int,
+        snapshot: Snapshot
+    ) {
         val views = RemoteViews(context.packageName, R.layout.widget_network_resizable)
+        val widthDp = snapshot.widthDp
+        val heightDp = snapshot.heightDp
 
         // 文字缩放系数：取宽/高缩放比较小者，避免只拉高时不必要的大字
-        val opts = appWidgetManager.getAppWidgetOptions(widgetId)
-        val widthDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-            .takeIf { it > 0 } ?: BASE_WIDTH_DP.toInt()
-        val heightDp = opts.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
-            .takeIf { it > 0 } ?: BASE_HEIGHT_DP.toInt()
         val widthScale = (widthDp / BASE_WIDTH_DP).coerceIn(0.6f, 3.5f)
         val heightScale = (heightDp / BASE_HEIGHT_DP).coerceIn(0.6f, 3.5f)
         val scale = minOf(widthScale, heightScale)
@@ -115,86 +223,23 @@ class ResizableNetworkWidgetProvider : AppWidgetProvider() {
         // 竖向拉伸（高约 3 格以上）时展开附加信息：双卡信号明细 + 内网 IP
         val tall = heightDp >= 120
 
-        // 当前网络模式
-        val currentMode = NetworkModeHelper.getCurrentMode(context)
-        views.setTextViewText(R.id.tv_widget_mode, currentMode.label)
+        views.setTextViewText(R.id.tv_widget_mode, snapshot.modeLabel)
+        views.setTextViewText(R.id.tv_widget_carrier, snapshot.carrierText)
+        views.setTextViewText(R.id.tv_widget_signal, snapshot.signalText)
 
-        // 运营商 + 信号
-        try {
-            val signalInfo = NetworkInfoHelper.getSignalInfo(context)
-            val dataSim = signalInfo.sims.find { it.isDataSim }
-            val carrier = dataSim?.carrierName ?: "未知运营商"
-            val netType = dataSim?.networkTypeName
-            views.setTextViewText(
-                R.id.tv_widget_carrier,
-                buildString {
-                    append(carrier)
-                    if (netType != null) append(" · $netType")
-                }
-            )
-
-            val dbm = dataSim?.signalDbm
-            val level = dataSim?.signalLevel ?: 0
-            views.setTextViewText(
-                R.id.tv_widget_signal,
-                buildString {
-                    if (level > 0) append("$level/4 格")
-                    if (dbm != null) {
-                        if (isNotEmpty()) append("  ")
-                        append("${dbm} dBm")
-                    }
-                    if (isEmpty()) append("无信号")
-                }
-            )
-        } catch (_: Exception) {
-            views.setTextViewText(R.id.tv_widget_carrier, "未知运营商")
-            views.setTextViewText(R.id.tv_widget_signal, "")
-        }
-
-        // 竖向拉伸时：双卡信号明细 + 内网 IP（窄矮组件自动隐藏）
-        try {
-            val signalInfo = NetworkInfoHelper.getSignalInfo(context)
-            val simsText = signalInfo.sims.sortedBy { it.slotIndex }.joinToString("\n") { sim ->
-                buildString {
-                    append("SIM${sim.slotIndex + 1} ")
-                    append(sim.carrierName ?: "")
-                    if (sim.isDataSim) append(" ★")
-                    sim.networkTypeName?.let { append(" ").append(it) }
-                    sim.signalDbm?.let { append("  ${it}dBm") }
-                }
-            }
-            if (tall && simsText.isNotEmpty()) {
-                views.setTextViewText(R.id.tv_widget_sims, simsText)
-                views.setViewVisibility(R.id.tv_widget_sims, android.view.View.VISIBLE)
-            } else {
-                views.setViewVisibility(R.id.tv_widget_sims, android.view.View.GONE)
-            }
-        } catch (_: Exception) {
+        // 双卡信号明细
+        if (tall && snapshot.simsText.isNotEmpty()) {
+            views.setTextViewText(R.id.tv_widget_sims, snapshot.simsText)
+            views.setViewVisibility(R.id.tv_widget_sims, android.view.View.VISIBLE)
+        } else {
             views.setViewVisibility(R.id.tv_widget_sims, android.view.View.GONE)
         }
 
-        try {
-            val ipText = IpHelper.getAllIpEntries(context).take(4).joinToString("\n") { entry ->
-                buildString {
-                    append(
-                        when (entry.kind) {
-                            IpHelper.Kind.MOBILE -> entry.simSlotIndex?.let { "SIM${it + 1}" } ?: entry.ifaceName
-                            IpHelper.Kind.WIFI -> "WLAN"
-                            IpHelper.Kind.ETHERNET -> "以太网"
-                            IpHelper.Kind.VPN -> "VPN"
-                        }
-                    )
-                    append("  ")
-                    append(entry.ipv4 ?: entry.ipv6 ?: "")
-                }
-            }
-            if (tall && ipText.isNotEmpty()) {
-                views.setTextViewText(R.id.tv_widget_ips, ipText)
-                views.setViewVisibility(R.id.tv_widget_ips, android.view.View.VISIBLE)
-            } else {
-                views.setViewVisibility(R.id.tv_widget_ips, android.view.View.GONE)
-            }
-        } catch (_: Exception) {
+        // 内网 IP
+        if (tall && snapshot.ipText.isNotEmpty()) {
+            views.setTextViewText(R.id.tv_widget_ips, snapshot.ipText)
+            views.setViewVisibility(R.id.tv_widget_ips, android.view.View.VISIBLE)
+        } else {
             views.setViewVisibility(R.id.tv_widget_ips, android.view.View.GONE)
         }
 
@@ -212,6 +257,7 @@ class ResizableNetworkWidgetProvider : AppWidgetProvider() {
         // 切换按钮点击
         val toggleIntent = Intent(context, ResizableNetworkWidgetProvider::class.java).apply {
             action = ACTION_TOGGLE
+            putExtra(NetworkWidgetProvider.EXTRA_TOGGLE_TOKEN, NetworkWidgetProvider.TOGGLE_TOKEN)
         }
         val pendingIntent = PendingIntent.getBroadcast(
             context, 0, toggleIntent,

@@ -22,8 +22,4 @@
     <color name="chip_bg">#14000000</color>
     <color name="divider">#1E000000</color>
 
-    <!-- Widget 颜色（固定深色风格，不随主题切换） -->
-    <color name="widget_color_4g_active">#FF2196F3</color>
-    <color name="widget_color_5g_active">#FF4CAF50</color>
-    <color name="widget_color_inactive">#FFCCCCCC</color>
 </resources>

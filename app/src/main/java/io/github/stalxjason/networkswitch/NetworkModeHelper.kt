@@ -1,6 +1,8 @@
 package io.github.stalxjason.networkswitch
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.os.SystemClock
 import android.provider.Settings
 import android.telephony.SubscriptionManager
 import android.util.Log
@@ -26,6 +28,12 @@ object NetworkModeHelper {
     private const val ROOT_TIMEOUT_SECONDS = 10L
     private const val QUERY_TIMEOUT_SECONDS = 8L
 
+    // Root 探测要 fork su，App 运行期间状态不会变，故缓存结果
+    private const val ROOT_CACHE_TTL_MS = 60_000L
+
+    @Volatile
+    private var rootCache: Pair<Long, Boolean>? = null
+
     /** 兼容旧调用的命名：mode 为切换后实际生效（或目标）模式 */
     data class ToggleResult(
         val success: Boolean,
@@ -38,6 +46,7 @@ object NetworkModeHelper {
     // ─────────────────────────────────────────────────────────────────────────
 
     /** 数据卡所在槽位；双卡切换数据卡后自动跟随，解析失败回落 slot 0 */
+    @SuppressLint("MissingPermission")  // activeSubscriptionInfoList 需 READ_PHONE_STATE；已 catch
     fun dataSlotId(context: Context): Int = try {
         val subId = SubscriptionManager.getDefaultDataSubscriptionId()
         if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
@@ -94,7 +103,7 @@ object NetworkModeHelper {
         }
     }
 
-    /** 回读 NR 放行状态；不可用返回 null */
+    /** 回读 NR 放行状态；命令失败或输出不可解析返回 null */
     private suspend fun queryNrAllowed(context: Context, slot: Int): Boolean? {
         val result = runShell(
             context, "cmd phone get-allowed-network-types-for-users -s $slot",
@@ -105,7 +114,8 @@ object NetworkModeHelper {
             TAG,
             "get-allowed exit=${result.success} stdout='${result.stdout.take(160)}' stderr='${result.stderr.take(80)}'"
         )
-        if (result.stdout.isBlank()) return null
+        // 命令失败时输出通常是 usage/error 文本，拿它判向会把失败误读成 LTE
+        if (!result.success || result.stdout.isBlank()) return null
         return NetworkMode.nrAllowedFromShellOutput(result.stdout)
     }
 
@@ -121,28 +131,36 @@ object NetworkModeHelper {
         val setCmd = "cmd phone set-allowed-network-types-for-users -s $slot ${target.allowedTypesMask}"
 
         // 通道 1：Shizuku
-        if (ShizukuHelper.isAvailable()) {
-            val setResult = ShizukuHelper.exec(setCmd)
+        if (ShizukuHelper.isAvailable(context)) {
+            val setResult = ShizukuHelper.exec(context, setCmd)
             if (verifyNrAllowed(context, slot, expectedNr, setResult)) {
                 saveBookkeeping(context, target)
-                return@withContext ToggleResult(true, target, "已切换到 ${target.label}")
+                return@withContext ToggleResult(true, target, successMessage(context, target))
             }
             Log.w(TAG, "Shizuku 通道校验未通过（命令成功=${setResult.success}）")
         }
 
         // 通道 2：Root
         if (hasRootAccess()) {
-            val setResult = rootExec(setCmd)
+            val setResult = rootExec(context, setCmd)
             if (verifyNrAllowed(context, slot, expectedNr, setResult)) {
                 saveBookkeeping(context, target)
-                return@withContext ToggleResult(true, target, "已切换到 ${target.label}")
+                return@withContext ToggleResult(true, target, successMessage(context, target))
             }
             Log.w(TAG, "Root 通道校验未通过（命令成功=${setResult.success}）")
         }
 
         // 兜底：引导系统设置手动切换
-        ToggleResult(false, if (currentNr) NetworkMode.NR_5G else NetworkMode.LTE, "切换失败，需要手动操作")
+        ToggleResult(
+            false,
+            if (currentNr) NetworkMode.NR_5G else NetworkMode.LTE,
+            context.getString(R.string.toast_switch_failed_manual)
+        )
     }
+
+    /** 切换成功文案：Toast 用，也复用给两个小组件 */
+    private fun successMessage(context: Context, mode: NetworkMode): String =
+        context.getString(R.string.toast_switch_to, context.getString(mode.labelRes))
 
     /**
      * 切换后校验：
@@ -209,32 +227,38 @@ object NetworkModeHelper {
         command: String,
         timeoutSeconds: Long
     ): ShizukuHelper.ShellResult? {
-        if (ShizukuHelper.isAvailable()) {
-            return ShizukuHelper.exec(command, timeoutSeconds)
+        if (ShizukuHelper.isAvailable(context)) {
+            return ShizukuHelper.exec(context, command, timeoutSeconds)
         }
         if (hasRootAccess()) {
-            return rootExec(command, timeoutSeconds)
+            return rootExec(context, command, timeoutSeconds)
         }
         return null
     }
 
+    /** Root 可用性；结果缓存 [ROOT_CACHE_TTL_MS]，避免每次刷新都 fork su */
     suspend fun hasRootAccess(): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-            val finished = process.waitFor(ROOT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            if (!finished) {
-                process.destroyForcibly()
-                return@withContext false
-            }
-            val output = process.inputStream.bufferedReader().readText()
-            output.contains("uid=0")
-        } catch (_: Exception) {
+        val now = SystemClock.elapsedRealtime()
+        rootCache?.takeIf { now - it.first < ROOT_CACHE_TTL_MS }?.second
+            ?: detectRoot().also { rootCache = now to it }
+    }
+
+    /** 实际 fork `su -c id` 探测；超时或输出异常一律按无 Root 处理 */
+    private fun detectRoot(): Boolean = try {
+        val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
+        if (!process.waitFor(ROOT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            process.destroyForcibly()
             false
+        } else {
+            process.inputStream.bufferedReader().readText().contains("uid=0")
         }
+    } catch (_: Exception) {
+        false
     }
 
     /** `su -c` 单命令执行；退出码即该命令本身，避免多命令拼接误报成功 */
     private suspend fun rootExec(
+        context: Context,
         command: String,
         timeoutSeconds: Long = ROOT_TIMEOUT_SECONDS
     ): ShizukuHelper.ShellResult = withContext(Dispatchers.IO) {
@@ -244,14 +268,16 @@ object NetworkModeHelper {
             if (!finished) {
                 process.destroyForcibly()
                 Log.w(TAG, "Root command timed out after ${timeoutSeconds}s: $command")
-                return@withContext ShizukuHelper.ShellResult(false, "", "命令执行超时")
+                return@withContext ShizukuHelper.ShellResult(
+                    false, "", context.getString(R.string.err_timeout)
+                )
             }
             val stdout = process.inputStream.bufferedReader().readText()
             val stderr = process.errorStream.bufferedReader().readText()
             ShizukuHelper.ShellResult(process.exitValue() == 0, stdout.trim(), stderr.trim())
         } catch (e: Exception) {
             Log.e(TAG, "Root exec failed: $command", e)
-            ShizukuHelper.ShellResult(false, "", e.message ?: "Root 执行失败")
+            ShizukuHelper.ShellResult(false, "", e.message ?: context.getString(R.string.err_root_failed))
         }
     }
 }

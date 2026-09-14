@@ -7,14 +7,8 @@ import android.net.NetworkCapabilities
 import android.net.TelephonyNetworkSpecifier
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
 import java.net.Inet4Address
 import java.net.Inet6Address
-import java.net.URL
 
 /**
  * 获取本机网络的 IP 信息
@@ -146,25 +140,18 @@ object IpHelper {
             )
         )
     }
-
-    /**
-     * 并行查询外网 IPv4 和 IPv6（suspend 函数）
-     */
-    suspend fun getPublicIp(): Pair<String?, String?> = coroutineScope {
-        val v4Deferred = async { fetchUrl("https://4.ipw.cn") }
-        val v6Deferred = async { fetchUrl("https://6.ipw.cn") }
-        v4Deferred.await() to v6Deferred.await()
-    }
-
-    private suspend fun fetchUrl(url: String): String? = withContext(Dispatchers.IO) {
-        try {
-            val conn = URL(url).openConnection() as HttpURLConnection
-            conn.connectTimeout = 5000
-            conn.readTimeout = 5000
-            conn.requestMethod = "GET"
-            if (conn.responseCode == 200) {
-                conn.inputStream.bufferedReader().readText().trim()
-            } else null
-        } catch (_: Exception) { null }
-    }
 }
+
+/** 展示标签：移动网络 SIM1 中国电信 ★ / WLAN / 以太网 / VPN */
+fun IpHelper.IpEntry.label(context: Context): String = when (kind) {
+    IpHelper.Kind.MOBILE -> buildString {
+        append(context.getString(R.string.ip_label_mobile))
+        simSlotIndex?.let { append(" ").append(context.getString(R.string.sim_label, it + 1)) }
+        simCarrier?.let { append(" ").append(it) }
+        if (isActiveData) append(context.getString(R.string.data_sim_mark))
+    }
+    IpHelper.Kind.WIFI -> context.getString(R.string.ip_label_wlan)
+    IpHelper.Kind.ETHERNET -> context.getString(R.string.ip_label_ethernet)
+    IpHelper.Kind.VPN -> context.getString(R.string.ip_label_vpn)
+}
+

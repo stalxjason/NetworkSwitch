@@ -11,25 +11,32 @@ android {
         applicationId = "io.github.stalxjason.networkswitch"
         minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        // CI / 本地打包时通过环境变量覆盖；不设则用仓库默认值
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("VERSION_NAME") ?: "1.0"
     }
 
+    // 三项缺一即不配置 release 签名：AGP 不接受空 storePassword / keyAlias / keyPassword，
+    // 且空串会让「已配置签名」的分支被错误点亮
+    val keystoreFile = file("networkswitch.keystore")
+    val storePw = System.getenv("KEYSTORE_PASSWORD")
+    val alias = System.getenv("KEY_ALIAS")
+    val keyPw = System.getenv("KEY_PASSWORD")
+    val releaseSigningAvailable =
+        keystoreFile.exists() && !storePw.isNullOrBlank() && !alias.isNullOrBlank() && !keyPw.isNullOrBlank()
+
     signingConfigs {
-        create("release") {
-            // 密钥与口令由 CI 环境变量提供；本地无 keystore 时不配置，
-            // debug 构建自动回落到默认 debug 签名
-            if (file("networkswitch.keystore").exists()) {
-                storeFile = file("networkswitch.keystore")
-                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
-                keyAlias = System.getenv("KEY_ALIAS") ?: ""
-                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+        if (releaseSigningAvailable) {
+            create("release") {
+                // 密钥与口令由 CI 环境变量提供；不配置时 debug 回落默认 debug 签名，
+                // release 构建出的 APK 未签名（需另行签名后再分发）
+                storeFile = keystoreFile
+                storePassword = storePw.orEmpty()
+                keyAlias = alias.orEmpty()
+                keyPassword = keyPw.orEmpty()
             }
         }
     }
-
-    val releaseSigningAvailable = file("networkswitch.keystore").exists() &&
-            !System.getenv("KEYSTORE_PASSWORD").isNullOrBlank()
 
     buildTypes {
         release {
@@ -65,7 +72,6 @@ android {
 
     testOptions {
         unitTests {
-            isIncludeAndroidResources = true
             // 中文路径下测试 worker 需显式 UTF-8，否则 ClassLoader 加载不到测试类
             all { test ->
                 test.jvmArgs("-Dfile.encoding=UTF-8")
@@ -94,6 +100,4 @@ dependencies {
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:4.3")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    testImplementation("org.robolectric:robolectric:4.12.2")
 }

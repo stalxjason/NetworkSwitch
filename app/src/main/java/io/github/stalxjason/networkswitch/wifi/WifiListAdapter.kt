@@ -1,16 +1,13 @@
 package io.github.stalxjason.networkswitch.wifi
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import io.github.stalxjason.networkswitch.R
+import io.github.stalxjason.networkswitch.copyTextToClipboard
 import io.github.stalxjason.networkswitch.databinding.ItemWifiBinding
 
 /**
@@ -41,27 +38,28 @@ class WifiListAdapter :
             entry,
             revealed = position in revealedPositions,
             expanded = position in expandedPositions,
-            onToggleReveal = {
-                if (position in revealedPositions) revealedPositions.remove(position)
-                else revealedPositions.add(position)
-                notifyItemChanged(position)
-            },
-            onToggleExpand = {
-                if (position in expandedPositions) expandedPositions.remove(position)
-                else expandedPositions.add(position)
-                notifyItemChanged(position)
-            },
-            onCopy = { copyToClipboard(holder.itemView.context, entry) }
+            onToggleReveal = { toggleState(revealedPositions, holder) },
+            onToggleExpand = { toggleState(expandedPositions, holder) },
+            onCopy = {
+                entry.password?.let {
+                    // 明文密码标敏感，API 34+ 系统提示更明确
+                    holder.itemView.context.copyTextToClipboard(
+                        it,
+                        holder.itemView.context.getString(R.string.clipboard_wifi_password_label),
+                        sensitive = true,
+                        toastRes = R.string.toast_copied_password
+                    )
+                }
+            }
         )
     }
 
-    private fun copyToClipboard(context: Context, entry: WifiPasswordProvider.WifiEntry) {
-        val password = entry.password ?: return
-        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        cm.setPrimaryClip(ClipData.newPlainText("WiFi password", password))
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            Toast.makeText(context, "已复制密码", Toast.LENGTH_SHORT).show()
-        }
+    /** 按 holder 当前位置翻转状态（DiffUtil 重排后 position 参数已失效） */
+    private fun toggleState(positions: MutableSet<Int>, holder: Holder) {
+        val position = holder.bindingAdapterPosition
+        if (position == RecyclerView.NO_POSITION) return
+        if (position in positions) positions.remove(position) else positions.add(position)
+        notifyItemChanged(position)
     }
 
     class Holder(private val binding: ItemWifiBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -74,34 +72,40 @@ class WifiListAdapter :
             onToggleExpand: () -> Unit,
             onCopy: () -> Unit
         ) {
+            val ctx = binding.root.context
             binding.tvSsid.text = entry.ssid
-            binding.tvSecurity.text = entry.security
+            binding.tvSecurity.text = ctx.getString(entry.securityRes)
 
             if (entry.password.isNullOrBlank()) {
-                binding.tvPassword.text = "无密码（开放网络或企业网）"
+                binding.tvPassword.text = ctx.getString(R.string.password_none)
                 binding.btnToggleVisible.visibility = View.GONE
                 binding.btnCopy.visibility = View.GONE
             } else {
                 binding.tvPassword.text =
-                    if (revealed) entry.password else "••••••••••••"
+                    if (revealed) entry.password else ctx.getString(R.string.password_hidden)
                 binding.btnToggleVisible.visibility = View.VISIBLE
                 binding.btnCopy.visibility = View.VISIBLE
-                binding.btnToggleVisible.text = if (revealed) "隐藏" else "显示"
+                binding.btnToggleVisible.text =
+                    ctx.getString(if (revealed) R.string.btn_hide else R.string.btn_show)
                 binding.btnToggleVisible.setOnClickListener { onToggleReveal() }
                 binding.btnCopy.setOnClickListener { onCopy() }
             }
 
             binding.detailsContainer.visibility = if (expanded) View.VISIBLE else View.GONE
             if (expanded) {
-                binding.detailBssid.text = entry.bssid ?: "—"
+                val bandText = entry.bandRes?.let { ctx.getString(it) }
+                binding.detailBssid.text = entry.bssid ?: ctx.getString(R.string.placeholder_dash)
                 binding.detailBand.text = when {
-                    entry.band != null && entry.channel != null ->
-                        "${entry.band} · 信道 ${entry.channel}"
-                    entry.band != null -> entry.band
-                    else -> "—"
+                    bandText != null && entry.channel != null ->
+                        ctx.getString(R.string.detail_band_channel, bandText, entry.channel)
+                    bandText != null -> bandText
+                    else -> ctx.getString(R.string.placeholder_dash)
                 }
-                binding.detailHidden.text = if (entry.isHidden) "是" else "否"
-                binding.detailAuth.text = entry.authDetail ?: entry.security
+                binding.detailHidden.text =
+                    ctx.getString(if (entry.isHidden) R.string.yes else R.string.no)
+                binding.detailAuth.text = entry.authDetailRes
+                    .joinToString(ctx.getString(R.string.list_separator)) { ctx.getString(it) }
+                    .ifEmpty { ctx.getString(entry.securityRes) }
             }
 
             binding.root.setOnClickListener { onToggleExpand() }

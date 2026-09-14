@@ -4,6 +4,15 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'versionCode（留空沿用仓库默认值）'
+        required: false
+        type: string
+      version_name:
+        description: 'versionName（留空沿用仓库默认值）'
+        required: false
+        type: string
 
 jobs:
   build:
@@ -18,22 +27,64 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # ubuntu 镜像不带 compileSdk 36 的 platform，AGP 自动下载也容易卡在
+      # build-tools 版本或 license 上，这里显式装。
+      # 若 @v3 解析失败，退回 @v2。
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-36 build-tools;34.0.0'
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # 未配置 keystore secret 时不构建 release，流水线仍产出 debug 供验证。
+      # 注意：这里必须 exit 0，否则「CI 只出 debug」模式会把整条流水线打断。
       - name: Decode keystore
+        id: keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 -d > app/networkswitch.keystore
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "signing=false" >> "$GITHUB_OUTPUT"
+            echo "KEYSTORE_BASE64 未配置，跳过 release 签名构建"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > app/networkswitch.keystore
+          echo "signing=true" >> "$GITHUB_OUTPUT"
 
-      - name: Build Release APK
+      # wrapper 锁定 Gradle 8.9；用 ./gradlew 而不是 gradle，避免 runner 预装版本漂移
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Run lint
+        run: ./gradlew lintDebug
+
+      - name: Build Debug APK
+        env:
+          VERSION_CODE: ${{ inputs.version_code }}
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: ./gradlew assembleDebug
+
+      - name: Build Signed Release APK
+        if: steps.keystore.outputs.signing == 'true'
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: gradle assembleRelease
+          VERSION_CODE: ${{ inputs.version_code }}
+          VERSION_NAME: ${{ inputs.version_name }}
+        run: ./gradlew assembleRelease
 
-      - name: Upload APK
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: network-switch-debug
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Upload Release APK
+        if: steps.keystore.outputs.signing == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: network-switch-release
