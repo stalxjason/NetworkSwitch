@@ -22,4 +22,7 @@
     <color name="chip_bg">#14000000</color>
     <color name="divider">#1E000000</color>
 
+    <!-- Adaptive icon 背景色（从启动图采样，与图标主色一致） -->
+    <color name="ic_launcher_background">#FF0064D6</color>
+
 </resources>
