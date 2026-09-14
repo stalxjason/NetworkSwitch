@@ -21,6 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # 仓库在 Windows 上维护（core.fileMode=false），wrapper 脚本可能丢可执行位。
+      # 这里兜底，避免再次出现 ./gradlew: Permission denied。
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
+
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
