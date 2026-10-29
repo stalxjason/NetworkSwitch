@@ -64,6 +64,19 @@
                 android:resource="@xml/network_widget_info" />
         </receiver>
 
+        <!-- 桌面 Widget（竖向：文字在上、按钮在下） -->
+        <receiver
+            android:name=".NetworkVerticalWidgetProvider"
+            android:label="@string/widget_name_vertical"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/network_widget_vertical_info" />
+        </receiver>
+
         <!-- 桌面 Widget（可自由调节尺寸，文字随尺寸缩放） -->
         <receiver
             android:name=".ResizableNetworkWidgetProvider"

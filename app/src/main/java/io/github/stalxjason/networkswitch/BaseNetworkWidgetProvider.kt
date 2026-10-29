@@ -40,13 +40,30 @@ abstract class BaseNetworkWidgetProvider : AppWidgetProvider() {
     /** 是否需要附加信息（双卡明细 / 内网 IP）；默认不查 */
     protected open fun wantsExtras(size: Size): Boolean = false
 
-    /** 子类把文案填进 RemoteViews（缩放、可见性等差异在这里处理） */
-    protected abstract fun buildRemoteViews(
+    /**
+     * 把文案填进 RemoteViews。
+     *
+     * 默认实现适用于「同一套控件 id（tv_widget_mode / tv_widget_carrier / tv_widget_signal /
+     * btn_widget_toggle / widget_root）」的布局，横排、竖排都能直接用；
+     * 需要按尺寸缩放、改可见性的子类（如可自由拉伸款）覆盖它。
+     */
+    protected open fun buildRemoteViews(
         context: Context,
         widgetId: Int,
         size: Size,
         texts: WidgetTextFormatter.Texts
-    ): RemoteViews
+    ): RemoteViews {
+        val views = RemoteViews(context.packageName, layoutId)
+        views.setTextViewText(R.id.tv_widget_mode, texts.modeLabel)
+        views.setTextViewText(R.id.tv_widget_carrier, texts.carrierText)
+        views.setTextViewText(R.id.tv_widget_signal, texts.signalText)
+
+        views.setOnClickPendingIntent(R.id.btn_widget_toggle, togglePendingIntent(context))
+        openAppPendingIntent(context)?.let {
+            views.setOnClickPendingIntent(R.id.widget_root, it)
+        }
+        return views
+    }
 
     override fun onUpdate(
         context: Context,

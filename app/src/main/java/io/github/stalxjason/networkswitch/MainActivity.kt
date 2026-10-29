@@ -439,6 +439,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 NetworkWidgetProvider.updateWidget(this@MainActivity)
+                NetworkVerticalWidgetProvider.updateWidget(this@MainActivity)
                 ResizableNetworkWidgetProvider.updateWidget(this@MainActivity)
             } finally {
                 // 可用性统一由 refreshStatus 决定（无 Shizuku/Root 时保持禁用）；

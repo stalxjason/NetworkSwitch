@@ -4,8 +4,10 @@
     <string name="app_name">网络切换</string>
     <string name="widget_name">网络切换</string>
     <string name="widget_name_resizable">网络切换-自由尺寸</string>
+    <string name="widget_name_vertical">网络切换-竖排</string>
     <string name="widget_description">显示当前网络模式，一键切换 4G/5G</string>
     <string name="widget_description_resizable">内容同网络切换组件，尺寸可自由拉伸，文字随大小缩放</string>
+    <string name="widget_description_vertical">文字在上、按钮在下的竖排组件，显示网络模式与信号</string>
 
     <!-- 网络模式与制式 -->
     <string name="mode_4g">4G</string>
