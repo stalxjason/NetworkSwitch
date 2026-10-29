@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- 1 格宽 × 2 格高，与横向 2x1 款占据同样的面积 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:initialLayout="@layout/widget_network_vertical"
-    android:minWidth="110dp"
+    android:minWidth="40dp"
     android:minHeight="110dp"
-    android:minResizeWidth="110dp"
+    android:minResizeWidth="40dp"
     android:minResizeHeight="110dp"
     android:resizeMode="none"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen"
     android:description="@string/widget_description_vertical"
     android:previewLayout="@layout/widget_network_vertical"
-    android:targetCellWidth="2"
+    android:targetCellWidth="1"
     android:targetCellHeight="2" />

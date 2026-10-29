@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 竖向款：文字在上，切换按钮在下 -->
+<!-- 竖排款：1 格宽 × 2 格高；文字在上、按钮在下。窄宽度下文字单行省略，避免撑破布局 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
-    android:padding="8dp">
+    android:padding="6dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -24,27 +24,33 @@
                 android:id="@+id/tv_widget_mode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:text="@string/widget_preview_mode"
                 android:textColor="#FFFFFF"
-                android:textSize="22sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tv_widget_carrier"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
+                android:ellipsize="end"
                 android:gravity="center"
+                android:maxLines="1"
                 android:text="@string/widget_preview_carrier"
                 android:textColor="#80FFFFFF"
                 android:textSize="10sp" />
 
             <TextView
                 android:id="@+id/tv_widget_signal"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
+                android:ellipsize="end"
                 android:gravity="center"
+                android:maxLines="1"
                 android:text="@string/widget_preview_signal"
                 android:textColor="#66FFFFFF"
                 android:textSize="9sp" />
@@ -54,14 +60,14 @@
         <!-- 下方切换按钮 -->
         <FrameLayout
             android:id="@+id/btn_widget_toggle"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="6dp">
 
             <ImageView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:contentDescription="@string/widget_btn_desc"
                 android:src="@drawable/widget_btn_bg" />
 
