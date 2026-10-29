@@ -4,15 +4,6 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      version_code:
-        description: 'versionCode（留空沿用仓库默认值）'
-        required: false
-        type: string
-      version_name:
-        description: 'versionName（留空沿用仓库默认值）'
-        required: false
-        type: string
 
 jobs:
   build:
@@ -43,21 +34,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # 未配置 keystore secret 时不构建 release，流水线仍产出 debug 供验证。
-      # 注意：这里必须 exit 0，否则「CI 只出 debug」模式会把整条流水线打断。
-      - name: Decode keystore
-        id: keystore
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: |
-          if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "signing=false" >> "$GITHUB_OUTPUT"
-            echo "KEYSTORE_BASE64 未配置，跳过 release 签名构建"
-            exit 0
-          fi
-          echo "$KEYSTORE_BASE64" | base64 -d > app/networkswitch.keystore
-          echo "signing=true" >> "$GITHUB_OUTPUT"
-
       # wrapper 锁定 Gradle 8.9；用 ./gradlew 而不是 gradle，避免 runner 预装版本漂移
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest
@@ -65,33 +41,13 @@ jobs:
       - name: Run lint
         run: ./gradlew lintDebug
 
+      # 自用项目：只产出 debug 包，不做 release 签名
       - name: Build Debug APK
-        env:
-          VERSION_CODE: ${{ inputs.version_code }}
-          VERSION_NAME: ${{ inputs.version_name }}
         run: ./gradlew assembleDebug
-
-      - name: Build Signed Release APK
-        if: steps.keystore.outputs.signing == 'true'
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          VERSION_CODE: ${{ inputs.version_code }}
-          VERSION_NAME: ${{ inputs.version_name }}
-        run: ./gradlew assembleRelease
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: network-switch-debug
           path: app/build/outputs/apk/debug/*.apk
-          retention-days: 30
-
-      - name: Upload Release APK
-        if: steps.keystore.outputs.signing == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: network-switch-release
-          path: app/build/outputs/apk/release/*.apk
           retention-days: 30

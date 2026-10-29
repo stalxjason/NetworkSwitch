@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- 深色：状态栏用浅色前景图标 -->
+    <!-- 深色：状态栏前景由 enableEdgeToEdge() 按主题自动适配，不再这里写死 -->
     <style name="Theme.NetworkSwitch" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
-        <item name="android:statusBarColor">@color/background</item>
-        <item name="android:navigationBarColor">@color/background</item>
         <item name="android:windowBackground">@color/background</item>
-        <item name="android:windowLightStatusBar">false</item>
     </style>
 
 </resources>

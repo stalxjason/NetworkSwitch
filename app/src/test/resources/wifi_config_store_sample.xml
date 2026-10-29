@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WifiConfigStoreData>
+<NetworkList>
+<Network><WifiConfiguration>
+<string name="ConfigKey">&quot;AndroidWifi&quot;NONE</string>
+<string name="SSID">&quot;AndroidWifi&quot;</string>
+<null name="PreSharedKey" />
+<null name="WEPKeys" />
+<int name="WEPTxKeyIndex" value="0" />
+<boolean name="HiddenSSID" value="false" />
+<boolean name="RequirePMF" value="false" />
+<byte-array name="AllowedKeyMgmt" num="1">01</byte-array>
+<byte-array name="AllowedProtocols" num="1">03</byte-array>
+<byte-array name="AllowedAuthAlgos" num="0"></byte-array>
+<byte-array name="AllowedGroupCiphers" num="0"></byte-array>
+<byte-array name="AllowedPairwiseCiphers" num="0"></byte-array>
+<byte-array name="AllowedGroupMgmtCiphers" num="0"></byte-array>
+<byte-array name="AllowedSuiteBCiphers" num="0"></byte-array>
+<boolean name="Shared" value="true" />
+<boolean name="AutoJoinEnabled" value="true" />
+<int name="Priority" value="0" />
+<int name="DeletionPriority" value="0" />
+<int name="NumRebootsSinceLastUse" value="1" />
+<boolean name="RepeaterEnabled" value="false" />
+<boolean name="EnableWifi7" value="true" />
+<SecurityParamsList>
+<SecurityParams>
+<int name="SecurityType" value="0" />
+<boolean name="IsEnabled" value="true" />
+<boolean name="SaeIsH2eOnlyMode" value="false" />
+<boolean name="SaeIsPkOnlyMode" value="false" />
+<boolean name="IsAddedByAutoUpgrade" value="false" />
+<byte-array name="AllowedSuiteBCiphers" num="0"></byte-array>
+</SecurityParams>
+<SecurityParams>
+<int name="SecurityType" value="6" />
+<boolean name="IsEnabled" value="true" />
+<boolean name="SaeIsH2eOnlyMode" value="false" />
+<boolean name="SaeIsPkOnlyMode" value="false" />
+<boolean name="IsAddedByAutoUpgrade" value="true" />
+<byte-array name="AllowedSuiteBCiphers" num="0"></byte-array>
+</SecurityParams>
+</SecurityParamsList>
+<boolean name="SendDhcpHostname" value="true" />
+<boolean name="Trusted" value="true" />
+<boolean name="IsRestricted" value="false" />
+<boolean name="OemPaid" value="false" />
+<boolean name="OemPrivate" value="false" />
+<boolean name="CarrierMerged" value="false" />
+<null name="BSSID" />
+<int name="Status" value="1" />
+<null name="FQDN" />
+<null name="ProviderFriendlyName" />
+<null name="LinkedNetworksList" />
+<null name="DefaultGwMacAddress" />
+<boolean name="ValidatedInternetAccess" value="false" />
+<boolean name="NoInternetAccessExpected" value="false" />
+<boolean name="MeteredHint" value="false" />
+<int name="MeteredOverride" value="0" />
+<boolean name="UseExternalScores" value="false" />
+<int name="CreatorUid" value="10181" />
+<string name="CreatorName">com.google.android.googlesdksetup</string>
+<int name="LastUpdateUid" value="10181" />
+<string name="LastUpdateName">com.google.android.googlesdksetup</string>
+<int name="LastConnectUid" value="10181" />
+<boolean name="IsLegacyPasspointConfig" value="false" />
+<long-array name="RoamingConsortiumOIs" num="0" />
+<string name="RandomizedMacAddress">0a:36:66:63:bb:15</string>
+<int name="MacRandomizationSetting" value="3" />
+<int name="CarrierId" value="-1" />
+<boolean name="IsMostRecentlyConnected" value="false" />
+<int name="SubscriptionId" value="-1" />
+<byte-array name="DppPrivateEcKey" num="0"></byte-array>
+<byte-array name="DppConnector" num="0"></byte-array>
+<byte-array name="DppCSignKey" num="0"></byte-array>
+<byte-array name="DppNetAccessKey" num="0"></byte-array>
+</WifiConfiguration>
+</Network>
+<Network><WifiConfiguration>
+<string name="ConfigKey">&quot;LabNet&quot;WPA_PSK</string>
+<string name="SSID">&quot;LabNet&quot;</string>
+<string name="PreSharedKey">&quot;labpass12345&quot;</string>
+<null name="WEPKeys" />
+<int name="WEPTxKeyIndex" value="0" />
+<boolean name="HiddenSSID" value="false" />
+<boolean name="RequirePMF" value="false" />
+<byte-array name="AllowedKeyMgmt" num="1">02</byte-array>
+<byte-array name="AllowedProtocols" num="1">03</byte-array>
+<byte-array name="AllowedAuthAlgos" num="0"></byte-array>
+<byte-array name="AllowedGroupCiphers" num="1">0f</byte-array>
+<byte-array name="AllowedPairwiseCiphers" num="1">06</byte-array>
+<byte-array name="AllowedGroupMgmtCiphers" num="0"></byte-array>
+<byte-array name="AllowedSuiteBCiphers" num="0"></byte-array>
+<boolean name="Shared" value="true" />
+<boolean name="AutoJoinEnabled" value="true" />
+<int name="Priority" value="0" />
+<int name="DeletionPriority" value="0" />
+<int name="NumRebootsSinceLastUse" value="1" />
+<boolean name="RepeaterEnabled" value="false" />
+<boolean name="EnableWifi7" value="true" />
+<SecurityParamsList>
+<SecurityParams>
+<int name="SecurityType" value="2" />
+<boolean name="IsEnabled" value="true" />
+<boolean name="SaeIsH2eOnlyMode" value="false" />
+<boolean name="SaeIsPkOnlyMode" value="false" />
+<boolean name="IsAddedByAutoUpgrade" value="false" />
+<byte-array name="AllowedSuiteBCiphers" num="0"></byte-array>
+</SecurityParams>
+<SecurityParams>
+<int name="SecurityType" value="4" />
+<boolean name="IsEnabled" value="true" />
+<boolean name="SaeIsH2eOnlyMode" value="false" />
+<boolean name="SaeIsPkOnlyMode" value="false" />
+<boolean name="IsAddedByAutoUpgrade" value="true" />
+<byte-array name="AllowedSuiteBCiphers" num="0"></byte-array>
+</SecurityParams>
+</SecurityParamsList>
+<boolean name="SendDhcpHostname" value="true" />
+<boolean name="Trusted" value="true" />
+<boolean name="IsRestricted" value="false" />
+<boolean name="OemPaid" value="false" />
+<boolean name="OemPrivate" value="false" />
+<boolean name="CarrierMerged" value="false" />
+<null name="BSSID" />
+<int name="Status" value="2" />
+<null name="FQDN" />
+<null name="ProviderFriendlyName" />
+<null name="LinkedNetworksList" />
+<null name="DefaultGwMacAddress" />
+<boolean name="ValidatedInternetAccess" value="false" />
+<boolean name="NoInternetAccessExpected" value="false" />
+<boolean name="MeteredHint" value="false" />
+<int name="MeteredOverride" value="0" />
+<boolean name="UseExternalScores" value="false" />
+<int name="CreatorUid" value="2000" />
+<string name="CreatorName">android.uid.shell:2000</string>
+<int name="LastUpdateUid" value="2000" />
+<string name="LastUpdateName">android.uid.shell:2000</string>
+<int name="LastConnectUid" value="0" />
+<boolean name="IsLegacyPasspointConfig" value="false" />
+<long-array name="RoamingConsortiumOIs" num="0" />
+<string name="RandomizedMacAddress">b6:b1:e4:e2:d1:8b</string>
+<int name="MacRandomizationSetting" value="3" />
+<int name="CarrierId" value="-1" />
+<boolean name="IsMostRecentlyConnected" value="false" />
+<int name="SubscriptionId" value="-1" />
+<byte-array name="DppPrivateEcKey" num="0"></byte-array>
+<byte-array name="DppConnector" num="0"></byte-array>
+<byte-array name="DppCSignKey" num="0"></byte-array>
+<byte-array name="DppNetAccessKey" num="0"></byte-array>
+</WifiConfiguration>
+</Network>
+<Network><WifiConfiguration>
+<string name="ConfigKey">&quot;WiFi&amp;测试&lt;1&gt;&quot;WPA_PSK</string>
+<string name="SSID">&quot;WiFi&amp;测试&lt;1&gt;&quot;</string>
+<string name="PreSharedKey">&quot;sympass123&quot;</string>
+<null name="WEPKeys" />
+<int name="WEPTxKeyIndex" value="0" />
+<boolean name="HiddenSSID" value="false" />
+<boolean name="RequirePMF" value="false" />
+<byte-array name="AllowedKeyMgmt" num="1">02</byte-array>
+<byte-array name="AllowedProtocols" num="1">03</byte-array>
+<byte-array name="AllowedAuthAlgos" num="0"></byte-array>
+<byte-array name="AllowedGroupCiphers" num="1">0f</byte-array>
+<byte-array name="AllowedPairwiseCiphers" num="1">06</byte-array>
+<byte-array name="AllowedGroupMgmtCiphers" num="0"></byte-array>
+<byte-array name="AllowedSuiteBCiphers" num="0"></byte-array>
+<boolean name="Shared" value="true" />
+<boolean name="AutoJoinEnabled" value="true" />
+<int name="Priority" value="0" />
+<int name="DeletionPriority" value="0" />
+<int name="NumRebootsSinceLastUse" value="0" />
+<boolean name="RepeaterEnabled" value="false" />
+<boolean name="EnableWifi7" value="true" />
+<SecurityParamsList>
+<SecurityParams>
+<int name="SecurityType" value="2" />
+<boolean name="IsEnabled" value="true" />
+<boolean name="SaeIsH2eOnlyMode" value="false" />
+<boolean name="SaeIsPkOnlyMode" value="false" />
+<boolean name="IsAddedByAutoUpgrade" value="false" />
+<byte-array name="AllowedSuiteBCiphers" num="0"></byte-array>
+</SecurityParams>
+<SecurityParams>
+<int name="SecurityType" value="4" />
+<boolean name="IsEnabled" value="true" />
+<boolean name="SaeIsH2eOnlyMode" value="false" />
+<boolean name="SaeIsPkOnlyMode" value="false" />
+<boolean name="IsAddedByAutoUpgrade" value="true" />
+<byte-array name="AllowedSuiteBCiphers" num="0"></byte-array>
+</SecurityParams>
+</SecurityParamsList>
+<boolean name="SendDhcpHostname" value="true" />
+<boolean name="Trusted" value="true" />
+<boolean name="IsRestricted" value="false" />
+<boolean name="OemPaid" value="false" />
+<boolean name="OemPrivate" value="false" />
+<boolean name="CarrierMerged" value="false" />
+<null name="BSSID" />
+<int name="Status" value="2" />
+<null name="FQDN" />
+<null name="ProviderFriendlyName" />
+<null name="LinkedNetworksList" />
+<null name="DefaultGwMacAddress" />
+<boolean name="ValidatedInternetAccess" value="false" />
+<boolean name="NoInternetAccessExpected" value="false" />
+<boolean name="MeteredHint" value="false" />
+<int name="MeteredOverride" value="0" />
+<boolean name="UseExternalScores" value="false" />
+<int name="CreatorUid" value="2000" />
+<string name="CreatorName">android.uid.shell:2000</string>
+<int name="LastUpdateUid" value="2000" />
+<string name="LastUpdateName">android.uid.shell:2000</string>
+<int name="LastConnectUid" value="0" />
+<boolean name="IsLegacyPasspointConfig" value="false" />
+<long-array name="RoamingConsortiumOIs" num="0" />
+<string name="RandomizedMacAddress">0a:bb:e8:87:6a:5e</string>
+<int name="MacRandomizationSetting" value="3" />
+<int name="CarrierId" value="-1" />
+<boolean name="IsMostRecentlyConnected" value="false" />
+<int name="SubscriptionId" value="-1" />
+<byte-array name="DppPrivateEcKey" num="0"></byte-array>
+<byte-array name="DppConnector" num="0"></byte-array>
+<byte-array name="DppCSignKey" num="0"></byte-array>
+<byte-array name="DppNetAccessKey" num="0"></byte-array>
+</WifiConfiguration>
+</Network>
+</NetworkList>
+</WifiConfigStoreData>
+

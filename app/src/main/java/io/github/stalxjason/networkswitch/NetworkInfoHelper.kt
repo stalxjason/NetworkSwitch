@@ -12,11 +12,14 @@ import android.telephony.CellSignalStrengthWcdma
 import android.telephony.SignalStrength
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
+import android.util.Log
 
 /**
  * 获取移动网络信号强度、运营商信息（支持双卡）
  */
 object NetworkInfoHelper {
+
+    private const val TAG = "NetworkInfoHelper"
 
     data class SimInfo(
         val slotIndex: Int,           // 0-based slot，0=SIM1，1=SIM2
@@ -27,23 +30,34 @@ object NetworkInfoHelper {
         val signalLevel: Int          // 该卡信号格数 0-4
     )
 
-    data class SignalInfo(
-        val sims: List<SimInfo>      // 所有已插卡槽信息
-    ) {
-        /** 当前数据卡信号格数（兜底用） */
-        val signalLevel: Int get() = sims.find { it.isDataSim }?.signalLevel ?: 0
-        /** 当前数据卡 dBm（兜底用） */
-        val signalStrengthDbm: Int? get() = sims.find { it.isDataSim }?.signalDbm
+    /** 读取失败的原因；null 表示读取过程正常（sims 为空 = 真的没插卡） */
+    enum class SignalError {
+        /** 设备没有电话服务（平板/模拟器） */
+        NO_TELEPHONY_SERVICE,
+
+        /** 拿不到 SubscriptionManager */
+        NO_SUBSCRIPTION_SERVICE,
+
+        /** 权限不足 */
+        PERMISSION,
+
+        /** 其它读取异常 */
+        READ_FAILED
     }
+
+    data class SignalInfo(
+        val sims: List<SimInfo>,          // 所有已插卡槽信息
+        val error: SignalError? = null    // 失败原因，供 UI 区分「没卡」和「读不到」
+    )
 
     @SuppressLint("MissingPermission")
     fun getSignalInfo(context: Context): SignalInfo {
         val tm = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
-            ?: return SignalInfo(emptyList())
+            ?: return SignalInfo(emptyList(), SignalError.NO_TELEPHONY_SERVICE)
 
         val subManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
                 as? SubscriptionManager
-            ?: return SignalInfo(emptyList())
+            ?: return SignalInfo(emptyList(), SignalError.NO_SUBSCRIPTION_SERVICE)
 
         // 当前数据卡 subscriptionId
         val activeDataSubId = try {
@@ -52,6 +66,7 @@ object NetworkInfoHelper {
 
         // 读取所有已插 SIM，含独立信号强度
         val sims = mutableListOf<SimInfo>()
+        var error: SignalError? = null
         try {
             val subs = subManager.activeSubscriptionInfoList ?: emptyList()
             for (sub in subs) {
@@ -75,11 +90,18 @@ object NetworkInfoHelper {
                     signalLevel = level
                 ))
             }
-        } catch (_: Exception) {}
+        } catch (e: SecurityException) {
+            Log.w(TAG, "读取 SIM 列表被拒（权限）", e)
+            error = SignalError.PERMISSION
+        } catch (e: Exception) {
+            Log.w(TAG, "读取 SIM 列表失败", e)
+            error = SignalError.READ_FAILED
+        }
 
-        // 降级：SubscriptionManager 无数据时回退到全局单卡；
-        // 槽位跟随默认数据卡动态解析，避免硬编码 slot 0 与实际不符
-        if (sims.isEmpty()) {
+        // 降级：SubscriptionManager 返回空列表时回退到全局单卡。
+        // 只在「没出错」时降级——出错说明是权限/异常导致读不到，
+        // 这时补一条假卡会把失败伪装成「SIM1 无信号」，error 也就永远传不出去。
+        if (sims.isEmpty() && error == null) {
             val carrier = tm.networkOperatorName?.takeIf { it.isNotBlank() }
             var netType: String? = null
             try { netType = getNetworkTypeName(context, tm.dataNetworkType) } catch (_: SecurityException) {}
@@ -96,7 +118,7 @@ object NetworkInfoHelper {
             )
         }
 
-        return SignalInfo(sims)
+        return SignalInfo(sims, if (sims.isEmpty()) error else null)
     }
 
     /**

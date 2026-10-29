@@ -3,23 +3,26 @@ package io.github.stalxjason.networkswitch
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.os.Build
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.color.MaterialColors
 import io.github.stalxjason.networkswitch.databinding.ActivityMainBinding
+import io.github.stalxjason.networkswitch.databinding.ItemSignalBinding
 import io.github.stalxjason.networkswitch.wifi.WifiListActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -34,10 +37,15 @@ class MainActivity : AppCompatActivity() {
     private var pendingWifiPage = false
     private var initializingThemeUI = false
 
-    // 运行时请求 READ_PHONE_STATE 权限
+    /** 已申请过一次电话权限；用于区分「还能再问」和「只能去系统设置」 */
+    private var phonePermissionDenied = false
+
+    // 运行时请求 READ_PHONE_STATE 权限（只在用户点信号区提示时触发）
     private val requestPhonePermission = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { _ ->
+    ) { granted ->
+        phonePermissionDenied =
+            granted[Manifest.permission.READ_PHONE_STATE] != true
         lifecycleScope.launch { refreshStatus() }
     }
 
@@ -62,8 +70,11 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppTheme.applyAccent(this)
+        // targetSdk 35+ 强制 edge-to-edge：状态栏/导航栏设为透明，内容自行避让
+        enableEdgeToEdge()
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        applySystemBarInsets(binding.root)
 
         // 配置重建（换主题 / 旋转）后仍需保留「授权完去 WiFi 密码页」的意图
         pendingWifiPage = savedInstanceState?.getBoolean(KEY_PENDING_WIFI_PAGE) ?: false
@@ -71,42 +82,15 @@ class MainActivity : AppCompatActivity() {
         Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         setupUI()
         setupThemeUI()
-        autoShizukuPrompt()
 
-        // READ_BASIC_PHONE_STATE 是 API 33 常量，minSdk 31 不能参与运行时判断，
-        // 否则会被内联进字节码（lint InlinedApi）
-        val wantedPerms = buildList {
-            add(Manifest.permission.READ_PHONE_STATE)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                add(Manifest.permission.READ_BASIC_PHONE_STATE)
-            }
-        }.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
-        if (wantedPerms.isNotEmpty()) {
-            requestPhonePermission.launch(wantedPerms.toTypedArray())
-        } else {
-            lifecycleScope.launch { refreshStatus() }
-        }
+        // 不自动弹任何权限：首屏直接渲染，无电话权限时信号区里给一行「点此授权」，
+        // 由用户主动触发申请（READ_BASIC_PHONE_STATE 是 normal 权限，不需要运行时请求）。
+        lifecycleScope.launch { refreshStatus() }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean(KEY_PENDING_WIFI_PAGE, pendingWifiPage)
-    }
-
-    /**
-     * 打开 App 即处理 Shizuku：运行中未授权 → 自动弹出授权弹窗；
-     * 未运行 → 提示引导（点「授权 Shizuku」会拉起 Shizuku 应用）。
-     */
-    private fun autoShizukuPrompt() {
-        when (ShizukuHelper.getStatus(this)) {
-            is ShizukuHelper.Status.Running -> ShizukuHelper.requestPermission()
-            is ShizukuHelper.Status.NotRunning ->
-                Toast.makeText(this, R.string.toast_shizuku_not_running_guide, Toast.LENGTH_LONG)
-                    .show()
-            else -> {}
-        }
     }
 
     /** 外观设置：深浅模式三段选择 + 主题色圆点 */
@@ -205,6 +189,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.btnRefresh.setOnClickListener { lifecycleScope.launch { refreshStatus() } }
+
+        // Root 兜底开关：默认关闭，勾选后才在取密失败时尝试 su
+        binding.cbAllowRoot.isChecked = AppSettings.allowRootFallback(this)
+        binding.cbAllowRoot.setOnCheckedChangeListener { _, checked ->
+            AppSettings.setAllowRootFallback(this, checked)
+        }
     }
 
     private fun openWifiPasswordPage() {
@@ -238,7 +228,8 @@ class MainActivity : AppCompatActivity() {
         val modeDeferred = async(Dispatchers.IO) { NetworkModeHelper.queryMode(this@MainActivity) }
         val signalDeferred = async(Dispatchers.IO) { NetworkInfoHelper.getSignalInfo(this@MainActivity) }
         val ipDeferred = async(Dispatchers.IO) { IpHelper.getAllIpEntries(this@MainActivity) }
-        val shizukuDeferred = async { ShizukuHelper.getStatus(this@MainActivity) }
+        // Shizuku 状态包含 PackageManager 查询与 binder ping，不能留主线程
+        val shizukuDeferred = async(Dispatchers.IO) { ShizukuHelper.getStatus(this@MainActivity) }
         val rootDeferred = async(Dispatchers.IO) { NetworkModeHelper.hasRootAccess() }
 
         // 网络模式（shell 回读真值，不可用时回落 settings 键）
@@ -283,14 +274,74 @@ class MainActivity : AppCompatActivity() {
     //   [▎▎▎▎]  SIM1  中国电信  LTE  ★  -89 dBm
     //   [▎▎░░]  SIM2  中国移动  LTE     -102 dBm
     // ─────────────────────────────────────────────────────────────────────────
+    private fun hasPhonePermission(): Boolean =
+        ContextCompat.checkSelfPermission(
+            this, Manifest.permission.READ_PHONE_STATE
+        ) == PackageManager.PERMISSION_GRANTED
+
+    /**
+     * 没有电话权限时，信号区放一行可点提示：先说明用途再申请；
+     * 已被「不再询问」拦下时，引导去系统设置里开。
+     */
+    private fun addSignalPermissionHint(container: LinearLayout) {
+        val canAsk = ActivityCompat.shouldShowRequestPermissionRationale(
+            this, Manifest.permission.READ_PHONE_STATE
+        )
+        val goSettings = phonePermissionDenied && !canAsk
+        val hint = TextView(this).apply {
+            text = getString(
+                if (goSettings) R.string.signal_permission_settings
+                else R.string.signal_permission_rationale
+            )
+            // dimen 写的是 sp，getDimension 已按 scaledDensity 折算成 px，textSize 属性正是 px
+            textSize = resources.getDimension(R.dimen.signal_text_placeholder)
+            setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
+            val padV = resources.getDimensionPixelSize(R.dimen.signal_hint_padding_v)
+            setPadding(0, padV, 0, padV)
+            setOnClickListener {
+                if (goSettings) {
+                    startActivity(
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", packageName, null)
+                        )
+                    )
+                } else {
+                    requestPhonePermission.launch(
+                        arrayOf(Manifest.permission.READ_PHONE_STATE)
+                    )
+                }
+            }
+        }
+        container.addView(hint)
+    }
+
     private fun updateSignalView(info: NetworkInfoHelper.SignalInfo) {
         val container = binding.llSignalContainer
         container.removeAllViews()
 
+        // 没电话权限时不要显示「无 SIM 卡」——那是在说假话
+        if (!hasPhonePermission()) {
+            addSignalPermissionHint(container)
+            return
+        }
+
         if (info.sims.isEmpty()) {
+            // 区分「真的没插卡」和「读不到」——后者要让用户知道是权限/异常，不是没卡
+            val emptyText = when (info.error) {
+                NetworkInfoHelper.SignalError.NO_TELEPHONY_SERVICE ->
+                    getString(R.string.signal_unsupported)
+
+                NetworkInfoHelper.SignalError.PERMISSION,
+                NetworkInfoHelper.SignalError.NO_SUBSCRIPTION_SERVICE,
+                NetworkInfoHelper.SignalError.READ_FAILED ->
+                    getString(R.string.signal_read_failed)
+
+                null -> getString(R.string.no_sim)
+            }
             val tv = TextView(this).apply {
-                text = getString(R.string.no_sim)
-                textSize = 14f
+                text = emptyText
+                textSize = resources.getDimension(R.dimen.signal_text_placeholder)
                 setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
             }
             container.addView(tv)
@@ -301,115 +352,53 @@ class MainActivity : AppCompatActivity() {
         val textPrimary    = ContextCompat.getColor(this, R.color.text_primary)
         val textSecondary  = ContextCompat.getColor(this, R.color.text_secondary)
         val dividerColor   = ContextCompat.getColor(this, R.color.divider)
+        val onPrimary      = ContextCompat.getColor(this, R.color.on_primary)
 
         info.sims.sortedBy { it.slotIndex }.forEachIndexed { idx, sim ->
-            // 行容器
-            val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    if (idx > 0) topMargin = dpToPx(10)
-                }
+            val row = ItemSignalBinding.inflate(layoutInflater, container, false)
+            if (idx > 0) {
+                (row.root.layoutParams as? LinearLayout.LayoutParams)?.topMargin =
+                    resources.getDimensionPixelSize(R.dimen.signal_row_gap)
             }
 
-            // 信号格（4格，阶梯高度）
-            val barsLayout = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.BOTTOM
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { marginEnd = dpToPx(10) }
+            // 信号格：达到的格数用主题色，其余用分隔线色
+            arrayOf(row.bar1, row.bar2, row.bar3, row.bar4).forEachIndexed { i, bar ->
+                bar.setBackgroundColor(if (i < sim.signalLevel) primaryColor else dividerColor)
             }
-            val barHeights = intArrayOf(6, 10, 15, 20) // dp
-            for (i in 0..3) {
-                val bar = View(this).apply {
-                    val active = i < sim.signalLevel
-                    setBackgroundColor(if (active) primaryColor else dividerColor)
-                    layoutParams = LinearLayout.LayoutParams(
-                        dpToPx(5), dpToPx(barHeights[i])
-                    ).apply { if (i > 0) marginStart = dpToPx(2) }
-                }
-                barsLayout.addView(bar)
-            }
-            row.addView(barsLayout)
 
             // SIM 标签：数据卡用实色主题芯片（半透明 tint 会把主题色洗淡导致白字不可读），
             // 其余卡用中性芯片
-            val tvSlot = TextView(this).apply {
-                text = getString(R.string.sim_label, sim.slotIndex + 1)
-                textSize = 10f
-                typeface = Typeface.DEFAULT_BOLD
-                setPadding(dpToPx(8), dpToPx(3), dpToPx(8), dpToPx(3))
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { marginEnd = dpToPx(8) }
-                if (sim.isDataSim) {
-                    background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dpToPx(6).toFloat()
-                        setColor(primaryColor())
-                    }
-                    setTextColor(0xFFFFFFFF.toInt())
-                } else {
-                    background = ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_chip)
-                    setTextColor(textSecondary)
+            row.tvSlot.text = getString(R.string.sim_label, sim.slotIndex + 1)
+            if (sim.isDataSim) {
+                row.tvSlot.background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = resources.getDimension(R.dimen.signal_chip_corner)
+                    setColor(primaryColor)
                 }
+                row.tvSlot.setTextColor(onPrimary)
+            } else {
+                row.tvSlot.background = ContextCompat.getDrawable(this, R.drawable.bg_chip)
+                row.tvSlot.setTextColor(textSecondary)
             }
-            row.addView(tvSlot)
 
             // 运营商名
-            val tvCarrier = TextView(this).apply {
-                text = sim.carrierName ?: getString(R.string.carrier_unknown)
-                textSize = 15f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(textPrimary)
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { marginEnd = dpToPx(6) }
-            }
-            row.addView(tvCarrier)
+            row.tvCarrier.text = sim.carrierName ?: getString(R.string.carrier_unknown)
+            row.tvCarrier.setTextColor(textPrimary)
 
             // 网络类型（芯片样式）
-            sim.networkTypeName?.let { netType ->
-                val chip = createChip(netType)
-                chip.layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { marginEnd = dpToPx(4) }
-                row.addView(chip)
-            }
+            row.tvNet.text = sim.networkTypeName.orEmpty()
+            row.tvNet.visibility = if (sim.networkTypeName != null) View.VISIBLE else View.GONE
 
             // 数据卡标记 ★
-            if (sim.isDataSim) {
-                val tvMark = TextView(this).apply {
-                    text = getString(R.string.data_sim_star)
-                    textSize = 11f
-                    setTextColor(primaryColor)
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply { marginEnd = dpToPx(6) }
-                }
-                row.addView(tvMark)
-            }
+            row.tvStar.setTextColor(primaryColor)
+            row.tvStar.visibility = if (sim.isDataSim) View.VISIBLE else View.GONE
 
             // dBm
-            sim.signalDbm?.let { dbm ->
-                val tvDbm = TextView(this).apply {
-                    text = getString(R.string.signal_dbm, dbm)
-                    textSize = 11f
-                    setTextColor(textSecondary)
-                }
-                row.addView(tvDbm)
-            }
+            row.tvDbm.text = sim.signalDbm?.let { getString(R.string.signal_dbm, it) }.orEmpty()
+            row.tvDbm.setTextColor(textSecondary)
+            row.tvDbm.visibility = if (sim.signalDbm != null) View.VISIBLE else View.GONE
 
-            container.addView(row)
+            container.addView(row.root)
         }
     }
 
@@ -424,19 +413,6 @@ class MainActivity : AppCompatActivity() {
         binding.ipRecycler.visibility = if (ipList.isEmpty()) View.GONE else View.VISIBLE
         binding.tvIpEmpty.visibility = if (ipList.isEmpty()) View.VISIBLE else View.GONE
         ipAdapter.submit(ipList)
-    }
-
-    /** 小号圆角芯片（网络类型 / IPv4·IPv6 前缀） */
-    private fun createChip(text: String): TextView = TextView(this).apply {
-        this.text = text
-        textSize = 10f
-        setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
-        background = ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_chip)
-        setPadding(dpToPx(8), dpToPx(3), dpToPx(8), dpToPx(3))
-        layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
     }
 
     /** 当前主题色（跟随「外观」里的主题色选择） */
@@ -462,18 +438,26 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                refreshStatus()
                 NetworkWidgetProvider.updateWidget(this@MainActivity)
                 ResizableNetworkWidgetProvider.updateWidget(this@MainActivity)
             } finally {
-                // 任何异常都要解锁按钮，否则卡在「切换中…」永久不可点
-                binding.btnToggle.isEnabled = true
+                // 可用性统一由 refreshStatus 决定（无 Shizuku/Root 时保持禁用）；
+                // 放在 finally 里，异常路径也不会永久卡在「切换中…」
+                runCatching { refreshStatus() }
             }
         }
     }
 
-    private fun dpToPx(dp: Int): Int =
-        (dp * resources.displayMetrics.density + 0.5f).toInt()
+    /** edge-to-edge 下由内容自己避让状态栏/导航栏（替代 XML 里的 fitsSystemWindows） */
+    private fun applySystemBarInsets(root: View) {
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
+            insets
+        }
+    }
 
     private companion object {
         const val KEY_PENDING_WIFI_PAGE = "pending_wifi_page"

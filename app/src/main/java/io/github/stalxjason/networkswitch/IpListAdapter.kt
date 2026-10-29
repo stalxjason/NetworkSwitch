@@ -66,13 +66,19 @@ class IpListAdapter :
             binding.tvIpLabel.text = labelSsb
 
             // IP：逐行，次级色；待机承载在末行附灰色小字
+            val rawIps = buildList {
+                entry.ipv4?.let { add(it) }
+                entry.ipv6?.let { add(it) }
+            }
+            if (rawIps.isEmpty()) {
+                binding.tvIpValues.visibility = View.GONE
+                // 复用 holder 时必须清掉上一条的点击监听，否则会复制到别的 IP
+                binding.root.setOnClickListener(null)
+                return
+            }
             val ips = buildList {
                 entry.ipv4?.let { add(context.getString(R.string.ip_value_v4, it)) }
                 entry.ipv6?.let { add(context.getString(R.string.ip_value_v6, it)) }
-            }
-            if (ips.isEmpty()) {
-                binding.tvIpValues.visibility = View.GONE
-                return
             }
             val standby = entry.kind == IpHelper.Kind.MOBILE &&
                     !entry.isActiveData && entry.simSubscriptionId != null
@@ -103,8 +109,9 @@ class IpListAdapter :
             binding.tvIpValues.visibility = View.VISIBLE
 
             binding.root.setOnClickListener {
+                // 复制原始 IP，不从展示串里 substringAfter 反推（文案改了就失效）
                 context.copyTextToClipboard(
-                    ips.joinToString("\n") { it.substringAfter(' ') },
+                    rawIps.joinToString("\n"),
                     context.getString(R.string.ip_copy_label)
                 )
             }

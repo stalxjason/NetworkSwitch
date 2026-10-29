@@ -1,18 +1,21 @@
-*.iml
+﻿# Gradle / IDE
 .gradle
+.kotlin
 /local.properties
 /.idea
+*.iml
 .DS_Store
+
+# 构建产物
 /build
 /app/build
+/app/release
 /captures
 .externalNativeBuild
 .cxx
-/app/release
+
+# 产物与密钥
 *.apk
 *.ap_
 *.aab
 *.keystore
-
-# 防止嵌套项目副本
-/NetworkSwitch/

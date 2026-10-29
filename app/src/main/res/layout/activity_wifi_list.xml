@@ -4,7 +4,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background"
-    android:fitsSystemWindows="true"
     android:orientation="vertical">
 
     <!-- 顶部标题（NoActionBar 主题，返回入口由本页自带） -->
@@ -29,9 +28,12 @@
 
         <TextView
             android:id="@+id/tv_title"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:layout_marginStart="4dp"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:text="@string/wifi_password_page"
             android:textColor="@color/text_primary"
             android:textSize="20sp"

@@ -22,6 +22,11 @@
     <color name="chip_bg">#14000000</color>
     <color name="divider">#1E000000</color>
 
+    <!-- 主题色卡片上的前景层级（始终压在 colorPrimary 上，两种主题都用白色透明度） -->
+    <color name="on_primary_70">#B3FFFFFF</color>
+    <color name="on_primary_80">#CCFFFFFF</color>
+    <color name="on_primary_13">#22FFFFFF</color>
+
     <!-- Adaptive icon 背景色（从启动图采样，与图标主色一致） -->
     <color name="ic_launcher_background">#FF0064D6</color>
 

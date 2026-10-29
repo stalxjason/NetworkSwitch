@@ -11,54 +11,17 @@ android {
         applicationId = "io.github.stalxjason.networkswitch"
         minSdk = 31
         targetSdk = 36
-        // CI / 本地打包时通过环境变量覆盖；不设则用仓库默认值
-        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
-        versionName = System.getenv("VERSION_NAME") ?: "1.0"
+        versionCode = 1
+        versionName = "1.0"
     }
 
-    // 三项缺一即不配置 release 签名：AGP 不接受空 storePassword / keyAlias / keyPassword，
-    // 且空串会让「已配置签名」的分支被错误点亮
-    val keystoreFile = file("networkswitch.keystore")
-    val storePw = System.getenv("KEYSTORE_PASSWORD")
-    val alias = System.getenv("KEY_ALIAS")
-    val keyPw = System.getenv("KEY_PASSWORD")
-    val releaseSigningAvailable =
-        keystoreFile.exists() && !storePw.isNullOrBlank() && !alias.isNullOrBlank() && !keyPw.isNullOrBlank()
-
-    signingConfigs {
-        if (releaseSigningAvailable) {
-            create("release") {
-                // 密钥与口令由 CI 环境变量提供；不配置时 debug 回落默认 debug 签名，
-                // release 构建出的 APK 未签名（需另行签名后再分发）
-                storeFile = keystoreFile
-                storePassword = storePw.orEmpty()
-                keyAlias = alias.orEmpty()
-                keyPassword = keyPw.orEmpty()
-            }
-        }
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            if (releaseSigningAvailable) {
-                signingConfig = signingConfigs.getByName("release")
-            }
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-        debug {
-            if (releaseSigningAvailable) {
-                signingConfig = signingConfigs.getByName("release")
-            }
-        }
-    }
+    // 自用项目，只构建 debug 包：不配置 signingConfigs / release，
+    // AGP 直接用默认 debug 签名，不需要 keystore 与环境变量。
 
     buildFeatures {
         viewBinding = true
+        // AGP 8 起默认不生成 BuildConfig；日志门禁要用 BuildConfig.DEBUG
+        buildConfig = true
     }
 
     compileOptions {
@@ -72,6 +35,9 @@ android {
 
     testOptions {
         unitTests {
+            // android.util.Log 等框架方法在 JVM 单测里没有实现，返回默认值而不是抛异常
+            isReturnDefaultValues = true
+
             // 中文路径下测试 worker 需显式 UTF-8，否则 ClassLoader 加载不到测试类
             all { test ->
                 test.jvmArgs("-Dfile.encoding=UTF-8")
@@ -100,4 +66,6 @@ dependencies {
     implementation("org.lsposed.hiddenapibypass:hiddenapibypass:4.3")
 
     testImplementation("junit:junit:4.13.2")
+    // JVM 单测里 android.util.Xml 是桩，解析器测试注入 kxml2 的实现
+    testImplementation("net.sf.kxml:kxml2:2.3.0")
 }

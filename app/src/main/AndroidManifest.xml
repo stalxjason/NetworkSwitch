@@ -4,12 +4,9 @@
     <!-- 网络状态权限（读取网络能力与链路信息；App 自身不发起任何网络请求） -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- 电话状态权限（读取运营商、SIM 卡信息） -->
+    <!-- 电话状态权限（读取运营商、SIM 卡信息；READ_BASIC_PHONE_STATE 为 normal 权限） -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_BASIC_PHONE_STATE" />
-
-    <!-- WiFi 状态权限（密码查看走 Shizuku 特权接口，此权限为声明性补充） -->
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
     <!-- Shizuku 权限 -->
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
@@ -24,9 +21,11 @@
         android:name="android.hardware.telephony"
         android:required="false" />
 
+    <!-- 不参与任何备份：本应用只存偏好设置，密码类工具不应把私有数据带进云端/换机迁移 -->
     <application
         android:name=".NetworkSwitchApplication"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
@@ -48,11 +47,15 @@
             android:exported="false"
             android:label="@string/wifi_password_page" />
 
-        <!-- 桌面 Widget -->
+        <!--
+          桌面 Widget。
+          exported=false：系统以显式广播投递 APPWIDGET_UPDATE、PendingIntent 点击也不受影响，
+          但第三方应用再也无法向这里发广播——令牌校验只剩第二道保险。
+        -->
         <receiver
             android:name=".NetworkWidgetProvider"
             android:label="@string/widget_name"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -65,7 +68,7 @@
         <receiver
             android:name=".ResizableNetworkWidgetProvider"
             android:label="@string/widget_name_resizable"
-            android:exported="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -74,13 +77,14 @@
                 android:resource="@xml/network_widget_resizable_info" />
         </receiver>
 
-        <!-- Shizuku Provider -->
+        <!-- Shizuku Provider（exported 是 Shizuku 探测/授权所必需，靠权限收敛访问面） -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"
             android:authorities="${applicationId}.shizuku"
             android:enabled="true"
             android:exported="true"
-            android:multiprocess="false" />
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
     </application>
 

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 信号行尺寸：集中在资源里，改字号/间距不用翻 Kotlin -->
+    <dimen name="signal_row_gap">10dp</dimen>
+    <dimen name="signal_bars_margin_end">10dp</dimen>
+    <dimen name="signal_bar_width">5dp</dimen>
+    <dimen name="signal_bar_gap">2dp</dimen>
+    <dimen name="signal_bar_height_1">6dp</dimen>
+    <dimen name="signal_bar_height_2">10dp</dimen>
+    <dimen name="signal_bar_height_3">15dp</dimen>
+    <dimen name="signal_bar_height_4">20dp</dimen>
+
+    <dimen name="signal_chip_padding_h">8dp</dimen>
+    <dimen name="signal_chip_padding_v">3dp</dimen>
+    <dimen name="signal_chip_corner">6dp</dimen>
+    <dimen name="signal_chip_margin_end">8dp</dimen>
+
+    <dimen name="signal_text_slot">10sp</dimen>
+    <dimen name="signal_text_carrier">15sp</dimen>
+    <dimen name="signal_text_net">10sp</dimen>
+    <dimen name="signal_text_star">11sp</dimen>
+    <dimen name="signal_text_dbm">11sp</dimen>
+    <dimen name="signal_text_placeholder">14sp</dimen>
+
+    <dimen name="signal_carrier_margin_end">6dp</dimen>
+    <dimen name="signal_net_margin_end">4dp</dimen>
+    <dimen name="signal_star_margin_end">6dp</dimen>
+    <dimen name="signal_hint_padding_v">8dp</dimen>
+</resources>

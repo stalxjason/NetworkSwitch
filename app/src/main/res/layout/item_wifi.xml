@@ -47,7 +47,7 @@
                 android:textSize="11sp" />
         </LinearLayout>
 
-        <!-- 行2：密码 + 显隐/复制 -->
+        <!-- 行2：密码 + 复制 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -65,17 +65,6 @@
                 android:maxLines="2"
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_toggle_visible"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minWidth="0dp"
-                android:paddingHorizontal="10dp"
-                android:text="@string/btn_show"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="12sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_copy"
@@ -123,28 +112,6 @@
                     android:layout_weight="1"
                     android:ellipsize="middle"
                     android:fontFamily="monospace"
-                    android:textColor="@color/text_primary"
-                    android:textSize="13sp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="80dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/detail_band"
-                    android:textColor="@color/text_hint"
-                    android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/detail_band"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:textColor="@color/text_primary"
                     android:textSize="13sp" />
             </LinearLayout>

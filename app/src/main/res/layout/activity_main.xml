@@ -3,8 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
-    android:fitsSystemWindows="true">
+    android:background="@color/background">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -57,7 +56,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/current_network_title"
-                    android:textColor="#B3FFFFFF"
+                    android:textColor="@color/on_primary_70"
                     android:textSize="14sp" />
 
                 <TextView
@@ -76,7 +75,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="@string/mode_desc_4g"
-                    android:textColor="#CCFFFFFF"
+                    android:textColor="@color/on_primary_80"
                     android:textSize="14sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -120,7 +119,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginBottom="14dp"
-                    android:background="#22FFFFFF" />
+                    android:background="@color/on_primary_13" />
 
                 <!-- IP 列表标题 -->
                 <LinearLayout
@@ -205,6 +204,16 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/status_checking"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+
+                <!-- 默认关闭：已 Root 设备上不该静默提权 -->
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cb_allow_root"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/allow_root_fallback"
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
             </LinearLayout>

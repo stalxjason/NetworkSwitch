@@ -1,4 +1,4 @@
-package io.github.stalxjason.networkswitch
+﻿package io.github.stalxjason.networkswitch
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -31,6 +31,12 @@ object NetworkModeHelper {
     // Root 探测要 fork su，App 运行期间状态不会变，故缓存结果
     private const val ROOT_CACHE_TTL_MS = 60_000L
 
+    // 切换成功后的「上次已知模式」私有缓存（不再写系统 settings）
+    private const val CACHE_PREFS = "network_mode_cache"
+    private const val KEY_CACHED_MODE = "cached_mode"
+    private const val KEY_CACHED_AT = "cached_at"
+    private const val MODE_CACHE_TTL_MS = 60_000L
+
     @Volatile
     private var rootCache: Pair<Long, Boolean>? = null
 
@@ -38,8 +44,22 @@ object NetworkModeHelper {
     data class ToggleResult(
         val success: Boolean,
         val mode: NetworkMode,
-        val message: String
+        val message: String,
+        /** false = 命令已执行但回读无法确认（部分 ROM 输出格式未知），不能声称已切换 */
+        val verified: Boolean = true
     )
+
+    /** 切换后回读校验的三态结果 */
+    private enum class VerifyResult {
+        /** 回读确认已生效 */
+        CONFIRMED,
+
+        /** 回读确认未生效 */
+        REJECTED,
+
+        /** 回读输出无法解析，命令退出码为 0，无法证实也无法证伪 */
+        UNVERIFIABLE
+    }
 
     // ─────────────────────────────────────────────────────────────────────────
     // 状态读取
@@ -60,8 +80,12 @@ object NetworkModeHelper {
         0
     }
 
-    /** 快速同步读取（settings 键，subId 键优先）：供 Widget 等无法 suspend 的场景 */
+    /**
+     * 快速同步读取：供 Widget 等无法 suspend 的场景。
+     * 先看本应用刚切换成功的私有缓存（60s 内），否则读系统 settings 键。
+     */
     fun getCurrentMode(context: Context): NetworkMode {
+        cachedMode(context)?.let { return it }
         return try {
             val cr = context.contentResolver
             val subId = try {
@@ -109,11 +133,14 @@ object NetworkModeHelper {
             context, "cmd phone get-allowed-network-types-for-users -s $slot",
             QUERY_TIMEOUT_SECONDS
         ) ?: return null
-        // 记录原始输出，便于适配各 ROM 的格式差异
-        Log.i(
-            TAG,
-            "get-allowed exit=${result.success} stdout='${result.stdout.take(160)}' stderr='${result.stderr.take(80)}'"
-        )
+        // 记录原始输出，便于适配各 ROM 的格式差异（仅 debug 包，避免量产版刷日志）
+        if (BuildConfig.DEBUG) {
+            Log.d(
+                TAG,
+                "get-allowed exit=${result.success} " +
+                    "stdout='${result.stdout.take(160)}' stderr='${result.stderr.take(80)}'"
+            )
+        }
         // 命令失败时输出通常是 usage/error 文本，拿它判向会把失败误读成 LTE
         if (!result.success || result.stdout.isBlank()) return null
         return NetworkMode.nrAllowedFromShellOutput(result.stdout)
@@ -133,21 +160,43 @@ object NetworkModeHelper {
         // 通道 1：Shizuku
         if (ShizukuHelper.isAvailable(context)) {
             val setResult = ShizukuHelper.exec(context, setCmd)
-            if (verifyNrAllowed(context, slot, expectedNr, setResult)) {
-                saveBookkeeping(context, target)
-                return@withContext ToggleResult(true, target, successMessage(context, target))
+            when (verifyNrAllowed(context, slot, expectedNr, setResult)) {
+                VerifyResult.CONFIRMED -> {
+                    cacheMode(context, target)
+                    return@withContext ToggleResult(true, target, successMessage(context, target))
+                }
+                VerifyResult.UNVERIFIABLE -> {
+                    cacheMode(context, target)
+                    return@withContext ToggleResult(
+                        true, target,
+                        context.getString(R.string.toast_switch_unverified),
+                        verified = false
+                    )
+                }
+                VerifyResult.REJECTED ->
+                    Log.w(TAG, "Shizuku 通道校验未通过（命令成功=${setResult.success}）")
             }
-            Log.w(TAG, "Shizuku 通道校验未通过（命令成功=${setResult.success}）")
         }
 
         // 通道 2：Root
         if (hasRootAccess()) {
             val setResult = rootExec(context, setCmd)
-            if (verifyNrAllowed(context, slot, expectedNr, setResult)) {
-                saveBookkeeping(context, target)
-                return@withContext ToggleResult(true, target, successMessage(context, target))
+            when (verifyNrAllowed(context, slot, expectedNr, setResult)) {
+                VerifyResult.CONFIRMED -> {
+                    cacheMode(context, target)
+                    return@withContext ToggleResult(true, target, successMessage(context, target))
+                }
+                VerifyResult.UNVERIFIABLE -> {
+                    cacheMode(context, target)
+                    return@withContext ToggleResult(
+                        true, target,
+                        context.getString(R.string.toast_switch_unverified),
+                        verified = false
+                    )
+                }
+                VerifyResult.REJECTED ->
+                    Log.w(TAG, "Root 通道校验未通过（命令成功=${setResult.success}）")
             }
-            Log.w(TAG, "Root 通道校验未通过（命令成功=${setResult.success}）")
         }
 
         // 兜底：引导系统设置手动切换
@@ -165,57 +214,55 @@ object NetworkModeHelper {
     /**
      * 切换后校验：
      * 1. 读回最多 3 次（间隔 1.5s）——modem 应用设置可能异步生效，读太快仍是旧值；
-     * 2. 若 get 输出始终无法解析（部分 ROM 格式未知），但 set 命令退出码为 0，
-     *    按成功处理——真机（HyperOS）验证 set 本身是真实生效的，宁可不校验也不误报失败。
+     * 2. 若 get 输出始终无法解析（部分 ROM 格式未知）但 set 退出码为 0，
+     *    返回 UNVERIFIABLE：命令确实执行了，但既不能说成功也不能说失败。
      */
     private suspend fun verifyNrAllowed(
         context: Context,
         slot: Int,
         expectedNr: Boolean,
         setResult: ShizukuHelper.ShellResult
-    ): Boolean {
+    ): VerifyResult {
         repeat(3) { attempt ->
             if (attempt > 0) delay(1500)
             val read = queryNrAllowed(context, slot)
             when {
-                read == expectedNr -> return true
+                read == expectedNr -> return VerifyResult.CONFIRMED
                 read == null -> {
                     Log.w(TAG, "get 输出无法解析（第 ${attempt + 1} 次）")
-                    if (attempt == 2 && setResult.success) {
-                        Log.i(TAG, "输出格式未知，按 set 命令退出码判定为成功")
-                        return true
-                    }
+                    if (attempt == 2 && setResult.success) return VerifyResult.UNVERIFIABLE
                 }
                 // read != expected：等待下一次重试
             }
         }
-        return false
+        return VerifyResult.REJECTED
     }
 
     /**
-     * 切换成功后把 settings 展示键（subId 键 + 裸键）对齐到目标值。
-     * 仅作为 Widget 快速展示的记账，写入失败不影响切换结果。
+     * 切换成功后把结果记进本应用私有存储（60s 内有效）。
+     *
+     * 以前这里是往 settings 写 `preferred_network_mode`——那是**系统的**键，
+     * 应用写进去只是自己的记账，跟 modem 真实状态无关，其他应用/系统读到的会是不一致的值。
+     * 现在只写自己的缓存，过期后回落到系统真值。
      */
-    private suspend fun saveBookkeeping(context: Context, target: NetworkMode) {
-        val value = target.telephonyType
-        val subId = try {
-            SubscriptionManager.getDefaultDataSubscriptionId()
-        } catch (_: Exception) {
-            SubscriptionManager.INVALID_SUBSCRIPTION_ID
-        }
-        val commands = buildList {
-            if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
-                add("settings put global $SETTINGS_KEY$subId $value")
-            }
-            add("settings put global $SETTINGS_KEY $value")
-        }
-        for (cmd in commands) {
-            try {
-                runShell(context, cmd, QUERY_TIMEOUT_SECONDS)
-            } catch (_: Exception) {
-            }
+    private fun cacheMode(context: Context, mode: NetworkMode) {
+        runCatching {
+            context.getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putInt(KEY_CACHED_MODE, mode.telephonyType)
+                .putLong(KEY_CACHED_AT, SystemClock.elapsedRealtime())
+                .apply()
         }
     }
+
+    /** 私有缓存里的「上次已知模式」；超过 TTL 视为不新鲜，返回 null 走系统真值 */
+    private fun cachedMode(context: Context): NetworkMode? = runCatching {
+        val prefs = context.getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE)
+        if (!prefs.contains(KEY_CACHED_MODE)) return@runCatching null
+        val at = prefs.getLong(KEY_CACHED_AT, 0L)
+        if (SystemClock.elapsedRealtime() - at > MODE_CACHE_TTL_MS) return@runCatching null
+        modeFromSettingValue(prefs.getInt(KEY_CACHED_MODE, -1))
+    }.getOrNull()
 
     // ─────────────────────────────────────────────────────────────────────────
     // Shell 通道

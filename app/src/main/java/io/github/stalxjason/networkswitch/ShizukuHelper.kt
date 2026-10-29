@@ -8,6 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import java.lang.reflect.Method
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
@@ -23,12 +25,14 @@ object ShizukuHelper {
     private const val SHIZUKU_PERMISSION_REQUEST_CODE = 1001
     private const val EXEC_TIMEOUT_SECONDS = 15L
 
+    /** shell 输出上限：正常命令只有几十字节，超过这个量级说明输出异常（防止被撑爆内存） */
+    private const val MAX_OUTPUT_CHARS = 256 * 1024
+
     // 只认当前包名；旧包名 rikka.shizuku 在 targetSdk 30+ 下不可见，不再兜底
     private const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
 
     // 缓存反射方法，避免每次调用都重新查找
     private var cachedNewProcessMethod: Method? = null
-    private var reflectionAvailable: Boolean? = null
 
     sealed class Status {
         data object NotInstalled : Status()
@@ -99,9 +103,10 @@ object ShizukuHelper {
         }
     }
 
-    // 读取进程输出的常驻线程池（守护线程，避免挂起命令卡死 IO 调度器）
-    private val outputPool = java.util.concurrent.Executors.newCachedThreadPool { r ->
-        Thread(r).apply { isDaemon = true }
+    // 读取进程输出的常驻线程池：固定 4 线程（守护），一次 exec 占用 2 个
+    // （stdout / stderr 各一）。有上限，卡死的读线程不会无限堆积。
+    private val outputPool = Executors.newFixedThreadPool(4) { r ->
+        Thread(r, "shizuku-exec").apply { isDaemon = true }
     }
 
     /**
@@ -129,12 +134,16 @@ object ShizukuHelper {
 
             val process = method.invoke(null, arrayOf("sh", "-c", command), null, null) as Process
 
-            val stdoutFuture = outputPool.submit<String> {
-                process.inputStream.bufferedReader().readText()
-            }
-            val stderrFuture = outputPool.submit<String> {
-                process.errorStream.bufferedReader().readText()
-            }
+            val stdoutFuture = outputPool.submit(
+                Callable {
+                    process.inputStream.bufferedReader().use { it.readAtMost(MAX_OUTPUT_CHARS) }
+                }
+            )
+            val stderrFuture = outputPool.submit(
+                Callable {
+                    process.errorStream.bufferedReader().use { it.readAtMost(MAX_OUTPUT_CHARS) }
+                }
+            )
 
             val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds)
             val stdout: String
@@ -143,12 +152,29 @@ object ShizukuHelper {
                 stdout = stdoutFuture.get(remainingNanos(deadline), TimeUnit.NANOSECONDS)
                 stderr = stderrFuture.get(remainingNanos(deadline), TimeUnit.NANOSECONDS)
             } catch (e: Exception) {
+                // 取消未完成的读任务并关流：阻塞在 read() 里的线程只有关流才会退出，
+                // 否则每次超时都会在白留一个线程
+                stdoutFuture.cancel(true)
+                stderrFuture.cancel(true)
+                runCatching { process.inputStream.close() }
+                runCatching { process.errorStream.close() }
                 process.destroyForcibly()
                 Log.w(TAG, "Shizuku exec timed out after ${timeoutSeconds}s: $command")
                 return@withContext ShellResult(false, "", context.getString(R.string.err_timeout))
             }
 
             // 流已 EOF → 远程命令已执行完，此时取退出码
+            // 输出被上限截断说明内容异常（正常命令只有几十字节），按失败处理而不是拿半截去解析
+            if (stdout.isProbablyTruncated(MAX_OUTPUT_CHARS) ||
+                stderr.isProbablyTruncated(MAX_OUTPUT_CHARS)
+            ) {
+                Log.w(TAG, "命令输出超过 ${MAX_OUTPUT_CHARS} 字符上限，按失败处理: $command")
+                return@withContext ShellResult(
+                    false, "",
+                    context.getString(R.string.err_output_too_long)
+                )
+            }
+
             val exitCode: Int? = try {
                 process.exitValue()
             } catch (_: Throwable) {
@@ -160,7 +186,9 @@ object ShizukuHelper {
                 }
             }
 
-            // 拿不到退出码时按成功处理：命令确已执行，由上层校验兜底
+            // 退出码拿不到时按「已执行」处理（两条流都已 EOF，命令确实跑完了）；
+            // 是否真的生效由上层回读校验，校验不出来时 ToggleResult.verified = false，
+            // 不会向用户谎称「已切换到 X」。
             ShellResult(exitCode == null || exitCode == 0, stdout.trim(), stderr.trim())
         } catch (e: Exception) {
             Log.e(TAG, "Failed to exec via Shizuku: $command", e)
@@ -179,11 +207,12 @@ object ShizukuHelper {
     }
 
     /**
-     * 获取 Shizuku.newProcess 反射方法（带缓存和降级）
+     * 获取 Shizuku.newProcess 反射方法（只缓存成功结果）
+     *
+     * 失败不写负缓存：Shizuku 升级 / 重装后会重新尝试，不会一次失败就永久不可用。
+     * 只有执行命令时才会走到这里，查找开销可忽略。
      */
     private fun getNewProcessMethod(): Method? {
-        reflectionAvailable?.let { if (!it) return null }
-
         cachedNewProcessMethod?.let { return it }
 
         return try {
@@ -195,15 +224,12 @@ object ShizukuHelper {
             )
             method.isAccessible = true
             cachedNewProcessMethod = method
-            reflectionAvailable = true
             method
         } catch (e: NoSuchMethodException) {
             Log.e(TAG, "Shizuku.newProcess method not found, API may have changed", e)
-            reflectionAvailable = false
             null
         } catch (e: Exception) {
             Log.e(TAG, "Failed to get Shizuku.newProcess method", e)
-            reflectionAvailable = false
             null
         }
     }

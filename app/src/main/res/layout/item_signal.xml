@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  信号行：信号格 + SIM 芯片 + 运营商 + 制式芯片 + 数据卡标记 + dBm。
+  原来这段是 Kotlin 里动态拼 LinearLayout，改成布局后可直接预览、改尺寸不用翻代码。
+  可变部分（信号格高亮、数据卡芯片底色、可见性）由 MainActivity 逐行绑定。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <!-- 4 格信号：高度阶梯递增，底对齐 -->
+    <LinearLayout
+        android:id="@+id/bar_container"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/signal_bars_margin_end"
+        android:gravity="bottom"
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/bar_1"
+            android:layout_width="@dimen/signal_bar_width"
+            android:layout_height="@dimen/signal_bar_height_1" />
+
+        <View
+            android:id="@+id/bar_2"
+            android:layout_width="@dimen/signal_bar_width"
+            android:layout_height="@dimen/signal_bar_height_2"
+            android:layout_marginStart="@dimen/signal_bar_gap" />
+
+        <View
+            android:id="@+id/bar_3"
+            android:layout_width="@dimen/signal_bar_width"
+            android:layout_height="@dimen/signal_bar_height_3"
+            android:layout_marginStart="@dimen/signal_bar_gap" />
+
+        <View
+            android:id="@+id/bar_4"
+            android:layout_width="@dimen/signal_bar_width"
+            android:layout_height="@dimen/signal_bar_height_4"
+            android:layout_marginStart="@dimen/signal_bar_gap" />
+    </LinearLayout>
+
+    <!-- SIM 芯片：数据卡为实色主题芯片（半透明会洗淡主题色导致白字不可读），其余用中性芯片 -->
+    <TextView
+        android:id="@+id/tv_slot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/signal_chip_margin_end"
+        android:background="@drawable/bg_chip"
+        android:paddingStart="@dimen/signal_chip_padding_h"
+        android:paddingTop="@dimen/signal_chip_padding_v"
+        android:paddingEnd="@dimen/signal_chip_padding_h"
+        android:paddingBottom="@dimen/signal_chip_padding_v"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/signal_text_slot"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tv_carrier"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/signal_carrier_margin_end"
+        android:textColor="@color/text_primary"
+        android:textSize="@dimen/signal_text_carrier"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tv_net"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/signal_net_margin_end"
+        android:background="@drawable/bg_chip"
+        android:paddingStart="@dimen/signal_chip_padding_h"
+        android:paddingTop="@dimen/signal_chip_padding_v"
+        android:paddingEnd="@dimen/signal_chip_padding_h"
+        android:paddingBottom="@dimen/signal_chip_padding_v"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/signal_text_net"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_star"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/signal_star_margin_end"
+        android:text="@string/data_sim_star"
+        android:textSize="@dimen/signal_text_star"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/tv_dbm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_secondary"
+        android:textSize="@dimen/signal_text_dbm"
+        android:visibility="gone" />
+
+</LinearLayout>
