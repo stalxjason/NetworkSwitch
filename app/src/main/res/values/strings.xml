@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 应用与小组件 -->
     <string name="app_name">网络切换</string>
@@ -148,6 +148,40 @@
     <string name="auth_wapi_cert">WAPI-CERT</string>
     <string name="auth_dpp">DPP（Easy Connect）</string>
     <string name="auth_none">无认证（开放网络）</string>
+
+    <!-- 主界面（改版：主卡 + 分组列表） -->
+    <string name="btn_switch_to_4g">切换到 4G LTE</string>
+    <string name="btn_switch_to_5g">切换到 5G NR</string>
+    <string name="hero_label">当前网络模式</string>
+    <string name="hero_status_ready">已授权</string>
+    <string name="hero_status_need">需授权</string>
+    <string name="hero_hint_ready">已连接，可一键切换</string>
+    <string name="hero_hint_need">需要 Shizuku 或 Root 授权，点此处理</string>
+
+    <string name="section_connect">连接</string>
+    <string name="section_permission">权限</string>
+    <string name="section_more">更多</string>
+    <string name="row_signal_title">信号与运营商</string>
+    <string name="row_ip_sub">点按展开，点按地址可复制</string>
+    <string name="row_shizuku_action_grant">去授权</string>
+    <string name="row_shizuku_action_ready">已就绪</string>
+    <string name="root_fallback_title">Root 兜底</string>
+    <string name="row_root_sub">取密失败时用 su 读配置（会弹授权）</string>
+    <string name="row_wifi_title">已保存的 WiFi 密码</string>
+    <string name="row_wifi_sub">Shizuku 读取，可复制</string>
+    <string name="row_appearance_sub">深浅模式与主题色</string>
+    <string name="theme_summary">%1$s · %2$s</string>
+    <string name="accent_blue_name">蓝色</string>
+    <string name="accent_green_name">绿色</string>
+    <string name="accent_purple_name">紫色</string>
+    <string name="accent_orange_name">橙色</string>
+    <string name="accent_cyan_name">青色</string>
+    <string name="accent_rose_name">玫红</string>
+    <string name="sheet_accent_note">换色会同时改变主卡渐变、按钮与图标底色</string>
+
+    <!-- 外观弹窗 -->
+    <string name="sheet_appearance_title">外观</string>
+    <string name="sheet_mode_label">深浅模式</string>
 
     <!-- 小组件 -->
     <string name="widget_btn_label">4G/5G</string>

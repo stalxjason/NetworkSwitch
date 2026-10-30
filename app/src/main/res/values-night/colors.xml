@@ -2,12 +2,52 @@
 <resources>
     <!-- 深色主题覆盖 -->
 
-    <color name="background">#000000</color>
-    <color name="card_bg">#1A1A1A</color>
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#999999</color>
-    <color name="text_hint">#666666</color>
+    <color name="background">#0F1319</color>
+    <color name="card_bg">#1A1F26</color>
+    <color name="text_primary">#E9EDF2</color>
+    <color name="text_secondary">#9AA6B2</color>
+    <color name="text_hint">#6E7A87</color>
 
-    <color name="chip_bg">#26FFFFFF</color>
-    <color name="divider">#22FFFFFF</color>
+    <color name="chip_bg">#1F3143</color>
+    <color name="divider">#242B34</color>
+
+    <!-- ── 主题色色板（深色）：渐变压暗不反相，瓦片用低饱和的深色底 ──
+         主色本身不覆盖，保持与浅色一致，避免深色下荧光感。 -->
+
+    <color name="accent_blue_hero_start">#1F5FA8</color>
+    <color name="accent_blue_hero_end">#11355C</color>
+    <color name="accent_blue_tile">#1F3143</color>
+
+    <color name="accent_green_hero_start">#1C6B42</color>
+    <color name="accent_green_hero_end">#0E3A24</color>
+    <color name="accent_green_tile">#1B3A2A</color>
+
+    <color name="accent_purple_hero_start">#4E2F8C</color>
+    <color name="accent_purple_hero_end">#2A1750</color>
+    <color name="accent_purple_tile">#2E2247</color>
+
+    <color name="accent_orange_hero_start">#8A4813</color>
+    <color name="accent_orange_hero_end">#4A2409</color>
+    <color name="accent_orange_tile">#3A2A18</color>
+
+    <!-- 青 / 玫红在深色下略提亮主色，否则按钮发灰 -->
+    <color name="accent_cyan">#22B8C4</color>
+    <color name="accent_cyan_hero_start">#14606A</color>
+    <color name="accent_cyan_hero_end">#0A3A40</color>
+    <color name="accent_cyan_tile">#1A3A3E</color>
+
+    <color name="accent_rose">#E85C8E</color>
+    <color name="accent_rose_hero_start">#7A2A48</color>
+    <color name="accent_rose_hero_end">#3F1226</color>
+    <color name="accent_rose_tile">#3A2029</color>
+
+    <color name="pill_ok_bg">#16301F</color>
+    <color name="pill_ok_fg">#6FD79B</color>
+    <color name="pill_warn_bg">#3A2A12</color>
+    <color name="pill_warn_fg">#F0BE72</color>
+
+    <color name="hero_pill_bg">#2EFFFFFF</color>
+    <color name="hero_pill_stroke">#47FFFFFF</color>
+    <color name="status_dot">#9BF0BE</color>
+    <color name="status_dot_warn">#FFC46B</color>
 </resources>

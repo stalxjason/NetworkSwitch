@@ -26,4 +26,58 @@
     <dimen name="signal_net_margin_end">4dp</dimen>
     <dimen name="signal_star_margin_end">6dp</dimen>
     <dimen name="signal_hint_padding_v">8dp</dimen>
+
+    <!-- ── 改版：页面骨架 ── -->
+    <dimen name="page_padding_h">20dp</dimen>
+    <dimen name="page_padding_bottom">28dp</dimen>
+    <dimen name="header_height">52dp</dimen>
+    <dimen name="header_logo">30dp</dimen>
+
+    <!-- 主卡 -->
+    <dimen name="hero_corner">24dp</dimen>
+    <dimen name="hero_padding_h">20dp</dimen>
+    <dimen name="hero_padding_v">17dp</dimen>
+    <dimen name="hero_text_mode">44sp</dimen>
+    <dimen name="hero_text_label">12sp</dimen>
+    <dimen name="hero_text_sub">12sp</dimen>
+    <dimen name="hero_pill_padding_h">9dp</dimen>
+    <dimen name="hero_pill_padding_v">4dp</dimen>
+    <dimen name="hero_pill_dot">5dp</dimen>
+    <dimen name="hero_divider_gap">10dp</dimen>
+
+    <!-- 主卡右上角的信号格 -->
+    <dimen name="hero_bar_width">3.5dp</dimen>
+    <dimen name="hero_bar_gap">2.5dp</dimen>
+    <dimen name="hero_bar_height_1">5dp</dimen>
+    <dimen name="hero_bar_height_2">9dp</dimen>
+    <dimen name="hero_bar_height_3">12.5dp</dimen>
+    <dimen name="hero_bar_height_4">16dp</dimen>
+
+    <!-- 主按钮 -->
+    <dimen name="toggle_height">54dp</dimen>
+    <dimen name="toggle_corner">27dp</dimen>
+    <dimen name="toggle_text">16sp</dimen>
+
+    <!-- 分组 -->
+    <dimen name="section_label_text">11sp</dimen>
+    <dimen name="section_label_margin_top">17dp</dimen>
+    <dimen name="section_label_margin_bottom">7dp</dimen>
+    <dimen name="section_label_margin_start">4dp</dimen>
+    <dimen name="group_corner">20dp</dimen>
+
+    <!-- 列表行 -->
+    <dimen name="row_min_height">56dp</dimen>
+    <dimen name="row_padding_h">15dp</dimen>
+    <dimen name="row_padding_v">11dp</dimen>
+    <dimen name="row_gap">12dp</dimen>
+    <dimen name="row_text_title">14sp</dimen>
+    <dimen name="row_text_sub">11sp</dimen>
+    <dimen name="row_divider_inset">54dp</dimen>
+    <dimen name="tile_size">30dp</dimen>
+    <dimen name="tile_corner">9dp</dimen>
+    <dimen name="tile_icon">17dp</dimen>
+    <dimen name="chevron_size">18dp</dimen>
+
+    <!-- 可展开内容的缩进：与行标题左缘对齐 -->
+    <dimen name="row_content_inset">57dp</dimen>
 </resources>

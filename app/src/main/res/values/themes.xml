@@ -1,28 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- 浅色：状态栏前景由 enableEdgeToEdge() 按主题自动适配，不再这里写死 -->
+    <!--
+      基础主题：状态栏前景由 enableEdgeToEdge() 按主题自动适配，这里不写死。
+      默认色板 = 蓝色；具体主题色由 AppTheme.applyAccent() 在 setContentView 之前
+      用 AccentOverlay.* 覆盖（applyStyle）。
+    -->
     <style name="Theme.NetworkSwitch" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
         <item name="android:windowBackground">@color/background</item>
+        <item name="heroStart">@color/accent_blue_hero_start</item>
+        <item name="heroEnd">@color/accent_blue_hero_end</item>
+        <item name="tileBg">@color/accent_blue_tile</item>
     </style>
 
-    <!-- 备选主题色 overlay：setTheme 后 applyStyle 覆盖 colorPrimary -->
+    <!--
+      主题色 overlay：整套色板一次给全。
+      parent="" 表示只覆盖这几项，其余属性继承当前主题。
+      浅色/深色的具体色值由 @color 在 values-night 里覆盖，overlay 本身不用分昼夜。
+    -->
+
     <style name="AccentOverlay.Blue" parent="">
         <item name="colorPrimary">@color/accent_blue</item>
+        <item name="heroStart">@color/accent_blue_hero_start</item>
+        <item name="heroEnd">@color/accent_blue_hero_end</item>
+        <item name="tileBg">@color/accent_blue_tile</item>
     </style>
 
     <style name="AccentOverlay.Green" parent="">
         <item name="colorPrimary">@color/accent_green</item>
+        <item name="heroStart">@color/accent_green_hero_start</item>
+        <item name="heroEnd">@color/accent_green_hero_end</item>
+        <item name="tileBg">@color/accent_green_tile</item>
     </style>
 
     <style name="AccentOverlay.Purple" parent="">
         <item name="colorPrimary">@color/accent_purple</item>
+        <item name="heroStart">@color/accent_purple_hero_start</item>
+        <item name="heroEnd">@color/accent_purple_hero_end</item>
+        <item name="tileBg">@color/accent_purple_tile</item>
     </style>
 
     <style name="AccentOverlay.Orange" parent="">
         <item name="colorPrimary">@color/accent_orange</item>
+        <item name="heroStart">@color/accent_orange_hero_start</item>
+        <item name="heroEnd">@color/accent_orange_hero_end</item>
+        <item name="tileBg">@color/accent_orange_tile</item>
+    </style>
+
+    <style name="AccentOverlay.Cyan" parent="">
+        <item name="colorPrimary">@color/accent_cyan</item>
+        <item name="heroStart">@color/accent_cyan_hero_start</item>
+        <item name="heroEnd">@color/accent_cyan_hero_end</item>
+        <item name="tileBg">@color/accent_cyan_tile</item>
+    </style>
+
+    <style name="AccentOverlay.Rose" parent="">
+        <item name="colorPrimary">@color/accent_rose</item>
+        <item name="heroStart">@color/accent_rose_hero_start</item>
+        <item name="heroEnd">@color/accent_rose_hero_end</item>
+        <item name="tileBg">@color/accent_rose_tile</item>
     </style>
 
 </resources>

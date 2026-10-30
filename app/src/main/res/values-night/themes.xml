@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <!-- 深色：状态栏前景由 enableEdgeToEdge() 按主题自动适配，不再这里写死 -->
-    <style name="Theme.NetworkSwitch" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="colorOnPrimary">@color/on_primary</item>
-        <item name="android:windowBackground">@color/background</item>
-    </style>
-
+    <!--
+      深色下不再重复定义 Theme.NetworkSwitch。
+      原来这里又写了一遍同名主题（内容与 values/themes.xml 相同），
+      会把主题里新增的 heroStart / heroEnd / tileBg 冲掉 —— 深色模式下主卡会取不到渐变颜色。
+      现在主题只在一处定义，深浅差异全部通过 @color 在 values-night 覆盖。
+    -->
 </resources>

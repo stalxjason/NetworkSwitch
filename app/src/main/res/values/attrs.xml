@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      主题色相关的自定义属性。
+      原来只有 colorPrimary 一个维度：换主题色时按钮变了、主卡渐变还是蓝的，
+      新界面里主卡是大面积渐变，颜色割裂感很明显。
+      现在每个主题色通过 AccentOverlay.* 一次性给出四个值：
+        colorPrimary  主按钮、行首图标、强调文字
+        heroStart     主卡渐变起点（右上亮）
+        heroEnd       主卡渐变终点（左下深）
+        tileBg        行首图标瓦片底色（主色的淡色化）
+    -->
+
+    <attr name="heroStart" format="color" />
+    <attr name="heroEnd" format="color" />
+    <attr name="tileBg" format="color" />
+</resources>

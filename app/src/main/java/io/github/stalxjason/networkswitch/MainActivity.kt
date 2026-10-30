@@ -3,11 +3,13 @@ package io.github.stalxjason.networkswitch
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
@@ -20,15 +22,18 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.color.MaterialColors
 import io.github.stalxjason.networkswitch.databinding.ActivityMainBinding
 import io.github.stalxjason.networkswitch.databinding.ItemSignalBinding
+import io.github.stalxjason.networkswitch.databinding.SheetAppearanceBinding
 import io.github.stalxjason.networkswitch.wifi.WifiListActivity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import rikka.shizuku.Shizuku
+import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
 
@@ -93,17 +98,42 @@ class MainActivity : AppCompatActivity() {
         outState.putBoolean(KEY_PENDING_WIFI_PAGE, pendingWifiPage)
     }
 
-    /** 外观设置：深浅模式三段选择 + 主题色圆点 */
+    /**
+     * 外观设置：首页只留一行摘要，具体的深浅模式与主题色在底部弹窗里改。
+     * 首页曾经放了一整张卡（3 段主题 + 4 个色点 = 7 个可点目标），属于配置一次就不再动的低频项。
+     */
     private fun setupThemeUI() {
+        updateAppearanceSummary()
+        binding.rowAppearance.setOnClickListener { showAppearanceSheet() }
+    }
+
+    /** 首页「外观」行的摘要：跟随系统 · 蓝色 */
+    private fun updateAppearanceSummary() {
+        val modeText = getString(
+            when (AppTheme.savedMode(this)) {
+                AppTheme.MODE_LIGHT -> R.string.theme_light
+                AppTheme.MODE_DARK -> R.string.theme_dark
+                else -> R.string.theme_system
+            }
+        )
+        val accentText = getString(AppTheme.accentOf(AppTheme.savedAccent(this)).nameRes)
+        binding.tvAppearanceSummary.text = getString(R.string.theme_summary, modeText, accentText)
+    }
+
+    private fun showAppearanceSheet() {
+        val sheet = SheetAppearanceBinding.inflate(layoutInflater)
+        val dialog = BottomSheetDialog(this)
+        dialog.setContentView(sheet.root)
+
         initializingThemeUI = true
         when (AppTheme.savedMode(this)) {
-            AppTheme.MODE_LIGHT -> binding.toggleTheme.check(R.id.btn_theme_light)
-            AppTheme.MODE_DARK -> binding.toggleTheme.check(R.id.btn_theme_dark)
-            else -> binding.toggleTheme.check(R.id.btn_theme_system)
+            AppTheme.MODE_LIGHT -> sheet.toggleTheme.check(R.id.btn_theme_light)
+            AppTheme.MODE_DARK -> sheet.toggleTheme.check(R.id.btn_theme_dark)
+            else -> sheet.toggleTheme.check(R.id.btn_theme_system)
         }
         initializingThemeUI = false
 
-        binding.toggleTheme.addOnButtonCheckedListener { _, checkedId, isChecked ->
+        sheet.toggleTheme.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked || initializingThemeUI) return@addOnButtonCheckedListener
             val mode = when (checkedId) {
                 R.id.btn_theme_light -> AppTheme.MODE_LIGHT
@@ -111,42 +141,46 @@ class MainActivity : AppCompatActivity() {
                 else -> AppTheme.MODE_SYSTEM
             }
             AppTheme.setNightMode(this, mode)
+            updateAppearanceSummary()
         }
 
-        val accentViews = linkedMapOf(
-            "blue" to binding.accentBlue,
-            "green" to binding.accentGreen,
-            "purple" to binding.accentPurple,
-            "orange" to binding.accentOrange,
-        )
-        fun refreshAccentDots(selected: String) {
-            accentViews.forEach { (key, view) ->
-                val normal = when (key) {
-                    "green" -> R.drawable.bg_accent_green
-                    "purple" -> R.drawable.bg_accent_purple
-                    "orange" -> R.drawable.bg_accent_orange
-                    else -> R.drawable.bg_accent_blue
-                }
-                val selectedDr = when (key) {
-                    "green" -> R.drawable.bg_accent_green_selected
-                    "purple" -> R.drawable.bg_accent_purple_selected
-                    "orange" -> R.drawable.bg_accent_orange_selected
-                    else -> R.drawable.bg_accent_blue_selected
-                }
-                view.background =
-                    ContextCompat.getDrawable(this, if (key == selected) selectedDr else normal)
+        // 主题色圆点按 ACCENTS 生成：加一个颜色只需要补一组颜色值 + 一条 AccentOverlay，
+        // 不用再为它画两张 drawable（选中态是代码描边）。
+        val selectedKey = AppTheme.savedAccent(this)
+        val dotSize = dp(34)
+        AppTheme.ACCENTS.forEach { accent ->
+            val dot = View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(dotSize, dotSize)
+                    .apply { marginEnd = dp(16) }
+                background = accentDot(
+                    AppTheme.accentColor(this@MainActivity, accent),
+                    accent.key == selectedKey
+                )
+                contentDescription = getString(accent.nameRes)
             }
-        }
-        val saved = AppTheme.savedAccent(this)
-        refreshAccentDots(saved)
-        accentViews.forEach { (key, view) ->
-            view.setOnClickListener {
-                AppTheme.setAccent(this, key)
-                refreshAccentDots(key)
+            dot.setOnClickListener {
+                if (accent.key == AppTheme.savedAccent(this)) return@setOnClickListener
+                AppTheme.setAccent(this, accent.key)
+                // 主题色在 setContentView 之前用 applyStyle 覆盖，只能重建整页来应用
+                dialog.dismiss()
                 recreate()
             }
+            sheet.accentRow.addView(dot)
         }
+        dialog.show()
     }
+
+    /** 主题色圆点：选中时描一圈正文色，未选中只填色 */
+    private fun accentDot(color: Int, selected: Boolean): GradientDrawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(color)
+            if (selected) {
+                setStroke(dp(2), ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+            }
+        }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
 
     override fun onDestroy() {
         super.onDestroy()
@@ -163,37 +197,80 @@ class MainActivity : AppCompatActivity() {
         binding.ipRecycler.adapter = ipAdapter
 
         binding.btnToggle.setOnClickListener { performToggle() }
-        binding.btnShizukuAuth.setOnClickListener {
-            when (val status = ShizukuHelper.getStatus(this)) {
-                is ShizukuHelper.Status.Authorized ->
-                    Toast.makeText(this, R.string.toast_shizuku_authorized_short, Toast.LENGTH_SHORT)
-                        .show()
-                is ShizukuHelper.Status.Running -> ShizukuHelper.requestPermission()
-                is ShizukuHelper.Status.NotRunning -> {
-                    Toast.makeText(this, R.string.toast_shizuku_start_first, Toast.LENGTH_LONG)
-                        .show()
-                    launchShizukuApp()
-                }
-                else ->
-                    Toast.makeText(this, R.string.toast_shizuku_install_first, Toast.LENGTH_LONG)
-                        .show()
-            }
-            lifecycleScope.launch { refreshStatus() }
-        }
-        binding.btnWifiPassword.setOnClickListener { openWifiPasswordPage() }
-        binding.btnOpenSettings.setOnClickListener {
-            try {
-                startActivity(Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS))
-            } catch (e: Exception) {
-                startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
-            }
-        }
+        binding.rowShizuku.setOnClickListener { onShizukuRowClick() }
+        // 主卡底部那行提示也直达授权：它是「不能切网」时最该先点的东西
+        binding.heroHintRow.setOnClickListener { onShizukuRowClick() }
+        binding.rowWifiPassword.setOnClickListener { openWifiPasswordPage() }
+        binding.rowOpenSettings.setOnClickListener { openNetworkSettings() }
         binding.btnRefresh.setOnClickListener { lifecycleScope.launch { refreshStatus() } }
+
+        // 可折叠行：信号默认展开（一眼看到几格、几个卡），IP 默认收起
+        binding.rowSignal.setOnClickListener {
+            setExpanded(
+                binding.signalContainer,
+                binding.chevSignal,
+                binding.signalContainer.visibility != View.VISIBLE
+            )
+        }
+        binding.rowIp.setOnClickListener {
+            setExpanded(
+                binding.ipContainer,
+                binding.chevIp,
+                binding.ipContainer.visibility != View.VISIBLE
+            )
+        }
+        binding.chevSignal.rotation = 180f
 
         // Root 兜底开关：默认关闭，勾选后才在取密失败时尝试 su
         binding.cbAllowRoot.isChecked = AppSettings.allowRootFallback(this)
         binding.cbAllowRoot.setOnCheckedChangeListener { _, checked ->
             AppSettings.setAllowRootFallback(this, checked)
+        }
+
+        // 底部渐隐只在还能继续往下滚时显示
+        binding.scroll.setOnScrollChangeListener { _, _, _, _, _ -> updateFade() }
+        binding.scroll.post { updateFade() }
+    }
+
+    /** 折叠/展开一行：内容显隐 + chevron 翻转 */
+    private fun setExpanded(content: View, chevron: ImageView, expanded: Boolean) {
+        content.visibility = if (expanded) View.VISIBLE else View.GONE
+        chevron.animate()
+            .rotation(if (expanded) 180f else 0f)
+            .setDuration(160)
+            .start()
+    }
+
+    private fun updateFade() {
+        binding.fadeBottom.visibility =
+            if (binding.scroll.canScrollVertically(1)) View.VISIBLE else View.GONE
+    }
+
+    /** Shizuku 一行的点击：已授权只提示，运行中申请，未运行/未安装则引导 */
+    private fun onShizukuRowClick() {
+        when (ShizukuHelper.getStatus(this)) {
+            is ShizukuHelper.Status.Authorized ->
+                Toast.makeText(this, R.string.toast_shizuku_authorized_short, Toast.LENGTH_SHORT)
+                    .show()
+
+            is ShizukuHelper.Status.Running -> ShizukuHelper.requestPermission()
+
+            is ShizukuHelper.Status.NotRunning -> {
+                Toast.makeText(this, R.string.toast_shizuku_start_first, Toast.LENGTH_LONG).show()
+                launchShizukuApp()
+            }
+
+            else ->
+                Toast.makeText(this, R.string.toast_shizuku_install_first, Toast.LENGTH_LONG).show()
+        }
+        lifecycleScope.launch { refreshStatus() }
+    }
+
+    private fun openNetworkSettings() {
+        try {
+            startActivity(Intent(Settings.ACTION_NETWORK_OPERATOR_SETTINGS))
+        } catch (e: Exception) {
+            startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
         }
     }
 
@@ -257,16 +334,35 @@ class MainActivity : AppCompatActivity() {
             if (hasRoot) R.string.root_available else R.string.root_unavailable
         )
 
-        val canToggle = shizukuStatus is ShizukuHelper.Status.Authorized || hasRoot
+        val authorized = shizukuStatus is ShizukuHelper.Status.Authorized
+        val canToggle = authorized || hasRoot
+
         binding.btnToggle.isEnabled = canToggle
+        // 文案写目标态：现在是 4G 就显示「切换到 5G NR」，比「切换 4G/5G」说得清楚
         binding.btnToggle.text = getString(
-            if (canToggle) R.string.btn_toggle_network else R.string.btn_toggle_disabled
+            when {
+                !canToggle -> R.string.btn_toggle_disabled
+                currentMode == NetworkMode.LTE -> R.string.btn_switch_to_5g
+                else -> R.string.btn_switch_to_4g
+            }
         )
 
-        binding.btnShizukuAuth.text = when (shizukuStatus) {
-            is ShizukuHelper.Status.Authorized -> R.string.shizuku_ready
-            else -> R.string.btn_shizuku_auth
-        }.let { getString(it) }
+        // 主卡上的授权状态：胶囊文案 + 状态点颜色（绿=可切换，琥珀=还需授权）
+        binding.tvHeroStatus.setText(
+            if (canToggle) R.string.hero_status_ready else R.string.hero_status_need
+        )
+        binding.tvHeroHint.setText(
+            if (canToggle) R.string.hero_hint_ready else R.string.hero_hint_need
+        )
+        val dotColor = ContextCompat.getColor(
+            this@MainActivity, if (canToggle) R.color.status_dot else R.color.status_dot_warn
+        )
+        binding.heroStatusDot.backgroundTintList = ColorStateList.valueOf(dotColor)
+        binding.heroHintDot.backgroundTintList = ColorStateList.valueOf(dotColor)
+
+        binding.tvShizukuAction.setText(
+            if (authorized) R.string.row_shizuku_action_ready else R.string.row_shizuku_action_grant
+        )
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -317,7 +413,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateSignalView(info: NetworkInfoHelper.SignalInfo) {
-        val container = binding.llSignalContainer
+        val container = binding.signalContainer
         container.removeAllViews()
 
         // 没电话权限时不要显示「无 SIM 卡」——那是在说假话
@@ -412,6 +508,10 @@ class MainActivity : AppCompatActivity() {
     private fun updateIpList(ipList: List<IpHelper.IpEntry>) {
         binding.ipRecycler.visibility = if (ipList.isEmpty()) View.GONE else View.VISIBLE
         binding.tvIpEmpty.visibility = if (ipList.isEmpty()) View.VISIBLE else View.GONE
+        // 收起状态下也能一眼看到主要地址；没有就退回说明文案
+        val primary = ipList.firstOrNull { it.ipv4 != null }?.ipv4
+            ?: ipList.firstOrNull()?.ipv6
+        binding.tvIpSummary.text = primary ?: getString(R.string.row_ip_sub)
         ipAdapter.submit(ipList)
     }
 

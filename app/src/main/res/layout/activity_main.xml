@@ -1,379 +1,795 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!--
+  主界面：主卡（当前模式 + 主操作）+ 三组列表（连接 / 权限 / 更多）。
+  结构沿用清单式列表，视觉用渐变主卡与图标瓦片；外观与授权细节收进底部弹窗。
+  变更 id 时同步改 MainActivity（viewBinding 按 id 生成属性）。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background">
+    android:background="@color/background"
+    android:orientation="vertical">
 
+    <!-- 顶栏：logo + 名称 + 刷新 -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:layout_height="@dimen/header_height"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="@dimen/page_padding_h">
 
-        <!-- 顶部标题 -->
-        <LinearLayout
-            android:layout_width="match_parent"
+        <ImageView
+            android:layout_width="@dimen/header_logo"
+            android:layout_height="@dimen/header_logo"
+            android:contentDescription="@string/app_name"
+            android:scaleType="fitCenter"
+            android:src="@drawable/app_logo_mark" />
+
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="32dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/app_logo"
-                android:contentDescription="@string/app_name" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
-                android:text="@string/app_name"
-                android:textColor="@color/text_primary"
-                android:textSize="24sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- 当前网络模式卡片 -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            app:cardBackgroundColor="?attr/colorPrimary"
-            app:cardCornerRadius="20dp"
-            app:cardElevation="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:paddingVertical="32dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/current_network_title"
-                    android:textColor="@color/on_primary_70"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/tv_current_mode"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/widget_preview_mode"
-                    android:textColor="@android:color/white"
-                    android:textSize="56sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tv_mode_desc"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="@string/mode_desc_4g"
-                    android:textColor="@color/on_primary_80"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 切换按钮 -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_toggle"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:layout_marginBottom="28dp"
-            android:text="@string/btn_toggle_network"
-            android:textSize="18sp"
-            app:backgroundTint="?attr/colorPrimary"
-            app:cornerRadius="16dp" />
-
-        <!-- 网络信息卡片 -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/card_bg"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <!-- 信号区域：动态渲染，每张 SIM 一行（信号格 + 运营商 + 网络类型 + dBm） -->
-                <LinearLayout
-                    android:id="@+id/ll_signal_container"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginBottom="16dp" />
-
-                <!-- 分隔 -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginBottom="14dp"
-                    android:background="@color/on_primary_13" />
-
-                <!-- IP 列表标题 -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="10dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/section_ip"
-                        android:textColor="@color/text_primary"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="@string/ip_tap_to_copy"
-                        android:textColor="@color/text_hint"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
-                <!-- IP 列表：RecyclerView（嵌在 ScrollView 内，关闭嵌套滚动） -->
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/ip_recycler"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:nestedScrollingEnabled="false" />
-
-                <TextView
-                    android:id="@+id/tv_ip_empty"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/ip_empty"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    android:visibility="gone" />
-
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 授权状态卡片 -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/card_bg"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="@string/section_auth"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <!-- Shizuku / Root 状态 -->
-                <TextView
-                    android:id="@+id/tv_shizuku_status"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/status_checking"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-
-                <TextView
-                    android:id="@+id/tv_root_status"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/status_checking"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-
-                <!-- 默认关闭：已 Root 设备上不该静默提权 -->
-                <com.google.android.material.checkbox.MaterialCheckBox
-                    android:id="@+id/cb_allow_root"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/allow_root_fallback"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="14sp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- 外观设置卡片 -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="@color/card_bg"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="@string/section_appearance"
-                    android:textColor="@color/text_primary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.button.MaterialButtonToggleGroup
-                    android:id="@+id/toggle_theme"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    app:selectionRequired="true"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_theme_light"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/theme_light"
-                        android:textColor="@color/toggle_btn_text"
-                        android:textSize="13sp"
-                        app:backgroundTint="@color/toggle_btn_bg"
-                        app:cornerRadius="12dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_theme_dark"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/theme_dark"
-                        android:textColor="@color/toggle_btn_text"
-                        android:textSize="13sp"
-                        app:backgroundTint="@color/toggle_btn_bg"
-                        app:cornerRadius="12dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_theme_system"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/theme_system"
-                        android:textColor="@color/toggle_btn_text"
-                        android:textSize="13sp"
-                        app:backgroundTint="@color/toggle_btn_bg"
-                        app:cornerRadius="12dp" />
-                </com.google.android.material.button.MaterialButtonToggleGroup>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:text="@string/section_accent"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-
-                <LinearLayout
-                    android:id="@+id/accent_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <View
-                        android:id="@+id/accent_blue"
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:background="@drawable/bg_accent_blue" />
-
-                    <View
-                        android:id="@+id/accent_green"
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_marginStart="16dp"
-                        android:background="@drawable/bg_accent_green" />
-
-                    <View
-                        android:id="@+id/accent_purple"
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_marginStart="16dp"
-                        android:background="@drawable/bg_accent_purple" />
-
-                    <View
-                        android:id="@+id/accent_orange"
-                        android:layout_width="30dp"
-                        android:layout_height="30dp"
-                        android:layout_marginStart="16dp"
-                        android:background="@drawable/bg_accent_orange" />
-                </LinearLayout>
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_shizuku_auth"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/btn_shizuku_auth"
+            android:layout_marginStart="10dp"
+            android:text="@string/app_name"
             android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
-            app:strokeColor="@color/text_hint" />
+            android:textSize="20sp"
+            android:textStyle="bold" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_wifi_password"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/btn_wifi_password"
-            android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
-            app:strokeColor="@color/text_hint" />
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_open_settings"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="@string/btn_open_settings"
-            android:textColor="@color/text_primary"
-            app:cornerRadius="12dp"
-            app:strokeColor="@color/text_hint" />
-
-        <com.google.android.material.button.MaterialButton
+        <ImageButton
             android:id="@+id/btn_refresh"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/btn_refresh"
-            android:textColor="@color/text_secondary"
-            app:cornerRadius="12dp" />
-
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/btn_refresh"
+            android:padding="9dp"
+            android:src="@drawable/ic_refresh"
+            app:tint="@color/text_secondary" />
     </LinearLayout>
-</ScrollView>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/scroll"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="@dimen/page_padding_h"
+                android:paddingTop="2dp"
+                android:paddingBottom="@dimen/page_padding_bottom">
+
+                <!-- ═══════ 主卡：当前网络模式 ═══════ -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_hero"
+                    android:elevation="8dp"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="@dimen/hero_padding_h"
+                    android:paddingTop="@dimen/hero_padding_v"
+                    android:paddingBottom="@dimen/hero_padding_v">
+
+                    <!-- 标签 + 信号格 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:letterSpacing="0.04"
+                            android:text="@string/hero_label"
+                            android:textColor="@color/on_primary_70"
+                            android:textSize="@dimen/hero_text_label"
+                            android:textStyle="bold" />
+
+                        <Space
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:gravity="bottom"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:layout_width="@dimen/hero_bar_width"
+                                android:layout_height="@dimen/hero_bar_height_1"
+                                android:background="@android:color/white" />
+
+                            <View
+                                android:layout_width="@dimen/hero_bar_width"
+                                android:layout_height="@dimen/hero_bar_height_2"
+                                android:layout_marginStart="@dimen/hero_bar_gap"
+                                android:background="@android:color/white" />
+
+                            <View
+                                android:layout_width="@dimen/hero_bar_width"
+                                android:layout_height="@dimen/hero_bar_height_3"
+                                android:layout_marginStart="@dimen/hero_bar_gap"
+                                android:background="@android:color/white" />
+
+                            <View
+                                android:layout_width="@dimen/hero_bar_width"
+                                android:layout_height="@dimen/hero_bar_height_4"
+                                android:layout_marginStart="@dimen/hero_bar_gap"
+                                android:alpha="0.3"
+                                android:background="@android:color/white" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- 模式 + 状态胶囊 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:gravity="bottom"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tv_current_mode"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:letterSpacing="-0.03"
+                            android:lineSpacingExtra="0dp"
+                            android:text="@string/widget_preview_mode"
+                            android:textColor="@android:color/white"
+                            android:textSize="@dimen/hero_text_mode"
+                            android:textStyle="bold" />
+
+                        <Space
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
+
+                        <LinearLayout
+                            android:id="@+id/hero_status_pill"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="6dp"
+                            android:background="@drawable/bg_hero_pill"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="@dimen/hero_pill_padding_h"
+                            android:paddingVertical="@dimen/hero_pill_padding_v">
+
+                            <View
+                                android:id="@+id/hero_status_dot"
+                                android:layout_width="@dimen/hero_pill_dot"
+                                android:layout_height="@dimen/hero_pill_dot"
+                                android:background="@drawable/bg_dot_status" />
+
+                            <TextView
+                                android:id="@+id/tv_hero_status"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="5dp"
+                                android:text="@string/hero_status_ready"
+                                android:textColor="@android:color/white"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_mode_desc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/mode_desc_4g"
+                        android:textColor="@color/on_primary_80"
+                        android:textSize="@dimen/hero_text_sub" />
+
+                    <!-- 主卡底部：可点，直达授权处理 -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="@dimen/hero_divider_gap"
+                        android:background="@color/on_primary_13" />
+
+                    <LinearLayout
+                        android:id="@+id/hero_hint_row"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="9dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:id="@+id/hero_hint_dot"
+                            android:layout_width="5dp"
+                            android:layout_height="5dp"
+                            android:background="@drawable/bg_dot_status" />
+
+                        <TextView
+                            android:id="@+id/tv_hero_hint"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:text="@string/hero_hint_ready"
+                            android:textColor="@color/on_primary_70"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- ═══════ 主按钮 ═══════ -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_toggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/toggle_height"
+                    android:layout_marginTop="12dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:letterSpacing="0"
+                    android:text="@string/btn_toggle_network"
+                    android:textColor="@color/on_primary"
+                    android:textSize="@dimen/toggle_text"
+                    android:textStyle="bold"
+                    app:backgroundTint="?attr/colorPrimary"
+                    app:cornerRadius="@dimen/toggle_corner"
+                    app:icon="@drawable/ic_swap"
+                    app:iconGravity="textStart"
+                    app:iconPadding="8dp"
+                    app:iconSize="18dp"
+                    app:iconTint="@color/on_primary" />
+
+                <!-- ═══════ 连接 ═══════ -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/section_label_margin_top"
+                    android:layout_marginBottom="@dimen/section_label_margin_bottom"
+                    android:letterSpacing="0.1"
+                    android:paddingStart="@dimen/section_label_margin_start"
+                    android:text="@string/section_connect"
+                    android:textColor="@color/text_hint"
+                    android:textSize="@dimen/section_label_text"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_bg"
+                    app:cardCornerRadius="@dimen/group_corner"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <!-- 信号与运营商（默认展开） -->
+                        <LinearLayout
+                            android:id="@+id/row_signal"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/row_min_height"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="@dimen/row_padding_h"
+                            android:paddingVertical="@dimen/row_padding_v">
+
+                            <ImageView
+                                android:layout_width="@dimen/tile_size"
+                                android:layout_height="@dimen/tile_size"
+                                android:background="@drawable/bg_tile"
+                                android:contentDescription="@null"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_signal"
+                                app:tint="?attr/colorPrimary" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/row_gap"
+                                android:layout_weight="1"
+                                android:text="@string/row_signal_title"
+                                android:textColor="@color/text_primary"
+                                android:textSize="@dimen/row_text_title"
+                                android:textStyle="bold" />
+
+                            <ImageView
+                                android:id="@+id/chev_signal"
+                                android:layout_width="@dimen/chevron_size"
+                                android:layout_height="@dimen/chevron_size"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_chevron_down"
+                                app:tint="@color/text_hint" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/signal_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="@dimen/row_content_inset"
+                            android:paddingEnd="@dimen/row_padding_h"
+                            android:paddingBottom="12dp" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginStart="@dimen/row_divider_inset"
+                            android:background="@color/divider" />
+
+                        <!-- IP 地址（默认收起） -->
+                        <LinearLayout
+                            android:id="@+id/row_ip"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/row_min_height"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="@dimen/row_padding_h"
+                            android:paddingVertical="@dimen/row_padding_v">
+
+                            <ImageView
+                                android:layout_width="@dimen/tile_size"
+                                android:layout_height="@dimen/tile_size"
+                                android:background="@drawable/bg_tile"
+                                android:contentDescription="@null"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_hash"
+                                app:tint="?attr/colorPrimary" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/row_gap"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/section_ip"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="@dimen/row_text_title"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tv_ip_summary"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="1dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/row_ip_sub"
+                                    android:textColor="@color/text_hint"
+                                    android:textSize="@dimen/row_text_sub" />
+                            </LinearLayout>
+
+                            <ImageView
+                                android:id="@+id/chev_ip"
+                                android:layout_width="@dimen/chevron_size"
+                                android:layout_height="@dimen/chevron_size"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_chevron_down"
+                                app:tint="@color/text_hint" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/ip_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingEnd="@dimen/row_padding_h"
+                            android:paddingBottom="12dp"
+                            android:paddingStart="@dimen/row_content_inset"
+                            android:visibility="gone">
+
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/ip_recycler"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:nestedScrollingEnabled="false" />
+
+                            <TextView
+                                android:id="@+id/tv_ip_empty"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/ip_empty"
+                                android:textColor="@color/text_hint"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══════ 权限 ═══════ -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/section_label_margin_top"
+                    android:layout_marginBottom="@dimen/section_label_margin_bottom"
+                    android:letterSpacing="0.1"
+                    android:paddingStart="@dimen/section_label_margin_start"
+                    android:text="@string/section_permission"
+                    android:textColor="@color/text_hint"
+                    android:textSize="@dimen/section_label_text"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_bg"
+                    app:cardCornerRadius="@dimen/group_corner"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:id="@+id/row_shizuku"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/row_min_height"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="@dimen/row_padding_h"
+                            android:paddingVertical="@dimen/row_padding_v">
+
+                            <ImageView
+                                android:layout_width="@dimen/tile_size"
+                                android:layout_height="@dimen/tile_size"
+                                android:background="@drawable/bg_tile"
+                                android:contentDescription="@null"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_shield"
+                                app:tint="?attr/colorPrimary" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/row_gap"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Shizuku"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="@dimen/row_text_title"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tv_shizuku_status"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="1dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/status_checking"
+                                    android:textColor="@color/text_hint"
+                                    android:textSize="@dimen/row_text_sub" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tv_shizuku_action"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/row_shizuku_action_grant"
+                                android:textColor="?attr/colorPrimary"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
+
+                            <ImageView
+                                android:layout_width="@dimen/chevron_size"
+                                android:layout_height="@dimen/chevron_size"
+                                android:layout_marginStart="3dp"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_chevron_right"
+                                app:tint="@color/text_hint" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginStart="@dimen/row_divider_inset"
+                            android:background="@color/divider" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/row_min_height"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="@dimen/row_padding_h"
+                            android:paddingVertical="@dimen/row_padding_v">
+
+                            <ImageView
+                                android:layout_width="@dimen/tile_size"
+                                android:layout_height="@dimen/tile_size"
+                                android:background="@drawable/bg_tile"
+                                android:contentDescription="@null"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_code"
+                                app:tint="?attr/colorPrimary" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/row_gap"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/root_fallback_title"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="@dimen/row_text_title"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="1dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/row_root_sub"
+                                    android:textColor="@color/text_hint"
+                                    android:textSize="@dimen/row_text_sub" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tv_root_status"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="8dp"
+                                android:text="@string/status_checking"
+                                android:textColor="@color/text_hint"
+                                android:textSize="11sp" />
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/cb_allow_root"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:contentDescription="@string/root_fallback_title" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- ═══════ 更多 ═══════ -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/section_label_margin_top"
+                    android:layout_marginBottom="@dimen/section_label_margin_bottom"
+                    android:letterSpacing="0.1"
+                    android:paddingStart="@dimen/section_label_margin_start"
+                    android:text="@string/section_more"
+                    android:textColor="@color/text_hint"
+                    android:textSize="@dimen/section_label_text"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_bg"
+                    app:cardCornerRadius="@dimen/group_corner"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:id="@+id/row_wifi_password"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/row_min_height"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="@dimen/row_padding_h"
+                            android:paddingVertical="@dimen/row_padding_v">
+
+                            <ImageView
+                                android:layout_width="@dimen/tile_size"
+                                android:layout_height="@dimen/tile_size"
+                                android:background="@drawable/bg_tile"
+                                android:contentDescription="@null"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_key"
+                                app:tint="?attr/colorPrimary" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/row_gap"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/row_wifi_title"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="@dimen/row_text_title"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="1dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/row_wifi_sub"
+                                    android:textColor="@color/text_hint"
+                                    android:textSize="@dimen/row_text_sub" />
+                            </LinearLayout>
+
+                            <ImageView
+                                android:layout_width="@dimen/chevron_size"
+                                android:layout_height="@dimen/chevron_size"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_chevron_right"
+                                app:tint="@color/text_hint" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginStart="@dimen/row_divider_inset"
+                            android:background="@color/divider" />
+
+                        <LinearLayout
+                            android:id="@+id/row_appearance"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/row_min_height"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="@dimen/row_padding_h"
+                            android:paddingVertical="@dimen/row_padding_v">
+
+                            <ImageView
+                                android:layout_width="@dimen/tile_size"
+                                android:layout_height="@dimen/tile_size"
+                                android:background="@drawable/bg_tile"
+                                android:contentDescription="@null"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_palette"
+                                app:tint="?attr/colorPrimary" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/row_gap"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/section_appearance"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="@dimen/row_text_title"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tv_appearance_summary"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="1dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:text="@string/row_appearance_sub"
+                                    android:textColor="@color/text_hint"
+                                    android:textSize="@dimen/row_text_sub" />
+                            </LinearLayout>
+
+                            <!-- 当前主题色（颜色跟随 colorPrimary，换色在弹窗里） -->
+                            <View
+                                android:layout_width="10dp"
+                                android:layout_height="10dp"
+                                android:layout_marginEnd="8dp"
+                                android:background="@drawable/bg_dot_accent" />
+
+                            <ImageView
+                                android:layout_width="@dimen/chevron_size"
+                                android:layout_height="@dimen/chevron_size"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_chevron_right"
+                                app:tint="@color/text_hint" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginStart="@dimen/row_divider_inset"
+                            android:background="@color/divider" />
+
+                        <LinearLayout
+                            android:id="@+id/row_open_settings"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:gravity="center_vertical"
+                            android:minHeight="@dimen/row_min_height"
+                            android:orientation="horizontal"
+                            android:paddingHorizontal="@dimen/row_padding_h"
+                            android:paddingVertical="@dimen/row_padding_v">
+
+                            <ImageView
+                                android:layout_width="@dimen/tile_size"
+                                android:layout_height="@dimen/tile_size"
+                                android:background="@drawable/bg_tile"
+                                android:contentDescription="@null"
+                                android:padding="6dp"
+                                android:src="@drawable/ic_gear"
+                                app:tint="?attr/colorPrimary" />
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/row_gap"
+                                android:layout_weight="1"
+                                android:text="@string/btn_open_settings"
+                                android:textColor="@color/text_primary"
+                                android:textSize="@dimen/row_text_title"
+                                android:textStyle="bold" />
+
+                            <ImageView
+                                android:layout_width="@dimen/chevron_size"
+                                android:layout_height="@dimen/chevron_size"
+                                android:contentDescription="@null"
+                                android:src="@drawable/ic_chevron_right"
+                                app:tint="@color/text_hint" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <View
+            android:id="@+id/fade_bottom"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/bg_fade_bottom" />
+    </FrameLayout>
+</LinearLayout>
