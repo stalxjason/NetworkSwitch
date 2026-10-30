@@ -12,7 +12,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
-        <!-- 左侧信息区（文字大小由 Provider 按组件尺寸动态设置；拉宽后居中） -->
+        <!-- 宸︿晶淇℃伅鍖猴紙鏂囧瓧澶у皬鐢?Provider 鎸夌粍浠跺昂瀵稿姩鎬佽缃紱鎷夊鍚庡眳涓級 -->
         <LinearLayout
             android:id="@+id/widget_info_column"
             android:layout_width="0dp"
@@ -25,6 +25,8 @@
                 android:id="@+id/tv_widget_mode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:text="@string/widget_preview_mode"
                 android:textColor="#FFFFFF"
                 android:textSize="22sp"
@@ -34,6 +36,8 @@
                 android:id="@+id/tv_widget_carrier"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
                 android:text="@string/widget_preview_carrier"
                 android:textColor="#80FFFFFF"
                 android:textSize="10sp" />
@@ -42,11 +46,13 @@
                 android:id="@+id/tv_widget_signal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
                 android:text="@string/widget_preview_signal"
                 android:textColor="#66FFFFFF"
                 android:textSize="9sp" />
 
-            <!-- 以下仅竖向拉伸（高 ≥3 格）时显示，由 Provider 控制可见性与内容 -->
+            <!-- 浠ヤ笅浠呯珫鍚戞媺浼革紙楂?鈮? 鏍硷級鏃舵樉绀猴紝鐢?Provider 鎺у埗鍙鎬т笌鍐呭 -->
             <TextView
                 android:id="@+id/tv_widget_sims"
                 android:layout_width="wrap_content"
@@ -69,7 +75,7 @@
 
         </LinearLayout>
 
-        <!-- 右侧切换按钮（尺寸由 Provider 按组件尺寸动态设置） -->
+        <!-- 鍙充晶鍒囨崲鎸夐挳锛堝昂瀵哥敱 Provider 鎸夌粍浠跺昂瀵稿姩鎬佽缃級 -->
         <FrameLayout
             android:id="@+id/btn_widget_toggle"
             android:layout_width="40dp"

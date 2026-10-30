@@ -10,6 +10,9 @@ import kotlinx.coroutines.withContext
  * 所有跨进程 / binder 查询都在 IO 上下文里执行。
  * 附加信息（双卡明细、内网 IP）只在组件被拉高、真的能显示时才查——
  * 拖拽 resize 时每帧都查一遍是纯浪费。
+ *
+ * [compact] 用于 1 格宽的窄组件：运营商那一行只留运营商名，去掉「· 网络类型」——
+ * 网络类型已经由上面的大字模式（5G / 4G）表达，窄宽度下重复只会被截断。
  */
 object WidgetTextFormatter {
 
@@ -21,7 +24,7 @@ object WidgetTextFormatter {
         val ipText: String = ""
     )
 
-    suspend fun load(context: Context, withExtras: Boolean): Texts =
+    suspend fun load(context: Context, withExtras: Boolean, compact: Boolean = false): Texts =
         withContext(Dispatchers.IO) {
             val modeLabel = try {
                 context.getString(NetworkModeHelper.getCurrentMode(context).labelRes)
@@ -39,7 +42,7 @@ object WidgetTextFormatter {
                 val carrier =
                     dataSim?.carrierName ?: context.getString(R.string.widget_carrier_unknown)
                 val netType = dataSim?.networkTypeName
-                carrierText = if (netType != null) {
+                carrierText = if (netType != null && !compact) {
                     context.getString(R.string.widget_carrier_net, carrier, netType)
                 } else {
                     carrier
@@ -47,9 +50,12 @@ object WidgetTextFormatter {
                 signalText = buildString {
                     val level = dataSim?.signalLevel ?: 0
                     val dbm = dataSim?.signalDbm
+                    // 窄组件拆成两行：格数一行、dBm 一行，避免「-59 / dBm」被折在中间
+                    val separator = if (compact) "\n"
+                    else context.getString(R.string.signal_separator)
                     if (level > 0) append(context.getString(R.string.widget_signal_bars, level))
                     if (dbm != null) {
-                        if (isNotEmpty()) append(context.getString(R.string.signal_separator))
+                        if (isNotEmpty()) append(separator)
                         append(context.getString(R.string.signal_dbm, dbm))
                     }
                     if (isEmpty()) append(context.getString(R.string.widget_signal_none))

@@ -41,6 +41,12 @@ abstract class BaseNetworkWidgetProvider : AppWidgetProvider() {
     protected open fun wantsExtras(size: Size): Boolean = false
 
     /**
+     * 是否为窄组件（1 格宽）。窄组件只能用精简文案：
+     * 运营商那一行不带「· 网络类型」，网络类型已由大字模式表达。
+     */
+    protected open fun wantsCompactText(size: Size): Boolean = false
+
+    /**
      * 把文案填进 RemoteViews。
      *
      * 默认实现适用于「同一套控件 id（tv_widget_mode / tv_widget_carrier / tv_widget_signal /
@@ -118,7 +124,11 @@ abstract class BaseNetworkWidgetProvider : AppWidgetProvider() {
         jobs[key] = scope.launch {
             if (debounceMs > 0) delay(debounceMs)
             val size = withContext(Dispatchers.IO) { sizeOf(appWidgetManager, widgetId) }
-            val texts = WidgetTextFormatter.load(context, wantsExtras(size))
+            val texts = WidgetTextFormatter.load(
+                context,
+                withExtras = wantsExtras(size),
+                compact = wantsCompactText(size)
+            )
             appWidgetManager.updateAppWidget(
                 widgetId,
                 buildRemoteViews(context, widgetId, size, texts)

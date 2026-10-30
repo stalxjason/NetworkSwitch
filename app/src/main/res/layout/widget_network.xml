@@ -23,8 +23,10 @@
             <!-- 当前网络模式（大字） -->
             <TextView
                 android:id="@+id/tv_widget_mode"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:text="@string/widget_preview_mode"
                 android:textColor="#FFFFFF"
                 android:textSize="22sp"
@@ -33,9 +35,11 @@
             <!-- 运营商 + 网络描述 -->
             <TextView
                 android:id="@+id/tv_widget_carrier"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="0dp"
+                android:ellipsize="end"
+                android:maxLines="2"
                 android:text="@string/widget_preview_carrier"
                 android:textColor="#80FFFFFF"
                 android:textSize="10sp" />
@@ -43,9 +47,11 @@
             <!-- 信号信息（格数 / dBm） -->
             <TextView
                 android:id="@+id/tv_widget_signal"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="0dp"
+                android:ellipsize="end"
+                android:maxLines="2"
                 android:text="@string/widget_preview_signal"
                 android:textColor="#66FFFFFF"
                 android:textSize="9sp" />
